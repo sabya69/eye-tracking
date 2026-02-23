@@ -1,1 +1,1 @@
-pip install mediapipe opencv-python numpy pandas seaborn matplotlib
+pip freeze > requirements.txt
