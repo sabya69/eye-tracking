@@ -51,6 +51,7 @@ class AttentionTracker:
 
         # ── CAMERA ─────────────────────────────────────────────────────────── #
         self.cap = cv2.VideoCapture(0)
+        #self.cap = cv2.VideoCapture(1)# this one is for web cam depending on the situation
         if not self.cap.isOpened():
             raise Exception("Webcam not detected")
 
