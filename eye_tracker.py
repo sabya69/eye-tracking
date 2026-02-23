@@ -614,7 +614,7 @@ class AttentionTracker:
                     facecolor="#0d0d0d")
         print("[INFO] session_report.png saved.")
         plt.show()
-
+print("hello")
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  ENTRY POINT
