@@ -1,1 +1,0 @@
-pip install mediapipe opencv-python numpy pandas seaborn matplotlib
