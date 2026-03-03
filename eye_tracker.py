@@ -549,7 +549,7 @@ class AttentionTracker:
     #  SAVE CSV
     # =========================================================================
     def _save_csv(self):
-        with open("gaze_log.csv", "w", newline="") as f:
+        with open("gaze_log.csv", "a", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["timestamp","gaze_x","gaze_y","blink",
                              "gaze_dir","head_status","ear_left","ear_right","attention_pct"])
