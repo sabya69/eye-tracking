@@ -1,3 +1,10 @@
+# ============================================================
+#  FILE: tracker.py
+#  Paste this file as-is into your eye_tracker/ folder.
+#  Imports GazeCursor, VirtualKeyboard, TextPad from the
+#  other files in the same folder.
+# ============================================================
+
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -33,455 +40,12 @@ try:
 except ImportError:
     SOUND_AVAILABLE = False
 
-
-# =============================================================================
-#  GAZE CURSOR  — animated crosshair + reticle drawn on the webcam feed
-# =============================================================================
-class GazeCursor:
-    def __init__(self):
-        self._sx    = 0.5   # smoothed normalised x in camera space
-        self._sy    = 0.5
-        self._alpha = 0.18  # EMA factor
-        self._pulse = 0.0
-        self.active = True
-
-    def update(self, nx: float, ny: float):
-        self._sx += self._alpha * (nx - self._sx)
-        self._sy += self._alpha * (ny - self._sy)
-        self._pulse = (self._pulse + 0.12) % (2 * np.pi)
-
-    def draw(self, frame):
-        if not self.active:
-            return
-        h, w = frame.shape[:2]
-        cx = int(np.clip(self._sx, 0.01, 0.99) * w)
-        cy = int(np.clip(self._sy, 0.01, 0.99) * h)
-
-        CROSS_LEN  = 18;  CROSS_GAP = 6
-        BOX_HALF   = 28;  BRACKET   = 10
-        RING_MIN   = 14;  RING_MAX  = 20
-
-        # pulsing ring
-        pr = int(RING_MIN + (RING_MAX - RING_MIN) * (0.5 + 0.5 * np.sin(self._pulse)))
-        pa = 0.4 + 0.3 * np.sin(self._pulse)
-        ov = frame.copy()
-        cv2.circle(ov, (cx, cy), pr, (0, 230, 255), 1, cv2.LINE_AA)
-        cv2.addWeighted(ov, pa, frame, 1 - pa, 0, frame)
-
-        # centre dot
-        cv2.circle(frame, (cx, cy), 4, (0, 255, 180), -1, cv2.LINE_AA)
-        cv2.circle(frame, (cx, cy), 4, (0, 0, 0),     1,  cv2.LINE_AA)
-
-        # crosshair
-        lc = (0, 230, 255)
-        cv2.line(frame, (cx-CROSS_GAP-CROSS_LEN, cy), (cx-CROSS_GAP, cy),        lc, 1, cv2.LINE_AA)
-        cv2.line(frame, (cx+CROSS_GAP, cy),            (cx+CROSS_GAP+CROSS_LEN, cy), lc, 1, cv2.LINE_AA)
-        cv2.line(frame, (cx, cy-CROSS_GAP-CROSS_LEN),  (cx, cy-CROSS_GAP),        lc, 1, cv2.LINE_AA)
-        cv2.line(frame, (cx, cy+CROSS_GAP),            (cx, cy+CROSS_GAP+CROSS_LEN), lc, 1, cv2.LINE_AA)
-
-        # corner brackets
-        bx1, by1 = cx-BOX_HALF, cy-BOX_HALF
-        bx2, by2 = cx+BOX_HALF, cy+BOX_HALF
-        bc = (0, 200, 255)
-        for ox, oy, dx, dy in [(bx1,by1,1,1),(bx2,by1,-1,1),(bx1,by2,1,-1),(bx2,by2,-1,-1)]:
-            cv2.line(frame, (ox, oy), (ox+dx*BRACKET, oy), bc, 2, cv2.LINE_AA)
-            cv2.line(frame, (ox, oy), (ox, oy+dy*BRACKET), bc, 2, cv2.LINE_AA)
-
-        cv2.putText(frame, "GAZE", (cx+BOX_HALF+4, cy-BOX_HALF+10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.38, (0, 200, 200), 1, cv2.LINE_AA)
+# ── Import the 3 helper modules from this same folder ─────────────────────── #
+from gaze_cursor      import GazeCursor
+from virtual_keyboard import VirtualKeyboard
+from text_pad         import TextPad
 
 
-# =============================================================================
-#  VIRTUAL KEYBOARD  — gaze-dwell / blink operated on-screen keyboard
-# =============================================================================
-class VirtualKeyboard:
-    DWELL_TIME = 1.2
-    KEY_W = 72;  KEY_H = 60;  KEY_GAP = 6;  MARGIN = 18;  TEXT_H = 52
-
-    ROWS = [
-        list("QWERTYUIOP"),
-        list("ASDFGHJKL"),
-        list("ZXCVBNM") + ["←"],
-        ["SPACE", "ENTER", "CLEAR", "CLOSE"],
-    ]
-
-    def __init__(self):
-        self.visible        = False
-        self.typed_text     = ""
-        self.hovered_key    = None
-        self.dwell_start    = None
-        self.dwell_progress = 0.0
-        self.last_pressed   = None
-        self.last_press_t   = 0.0
-        self._textpad       = None   # set via link_textpad()
-        self._build_layout()
-
-    # ── geometry ─────────────────────────────────────────────────────────────
-    def _kw(self, label):
-        if label == "SPACE":                      return self.KEY_W * 4
-        if label in ("ENTER", "CLEAR", "CLOSE"):  return self.KEY_W * 2
-        return self.KEY_W
-
-    def _build_layout(self):
-        self.key_list = []
-        max_row_w = max(sum(self._kw(k)+self.KEY_GAP for k in r)-self.KEY_GAP for r in self.ROWS)
-        self._canvas_w = max_row_w + 2*self.MARGIN
-        self._canvas_h = self.TEXT_H + self.MARGIN + len(self.ROWS)*(self.KEY_H+self.KEY_GAP) + self.MARGIN + 20
-        y = self.TEXT_H + self.MARGIN
-        for row in self.ROWS:
-            rw = sum(self._kw(k)+self.KEY_GAP for k in row)-self.KEY_GAP
-            x  = self.MARGIN + (max_row_w - rw)//2
-            for label in row:
-                kw = self._kw(label)
-                self.key_list.append((label, x, y, x+kw, y+self.KEY_H))
-                x += kw + self.KEY_GAP
-            y += self.KEY_H + self.KEY_GAP
-
-    @property
-    def window_size(self):
-        return self._canvas_w, self._canvas_h
-
-    # ── API ───────────────────────────────────────────────────────────────────
-    def link_textpad(self, pad):
-        """Connect TextPad so ENTER sends text there."""
-        self._textpad = pad
-
-    def toggle(self):
-        self.visible = not self.visible
-        if not self.visible:
-            try: cv2.destroyWindow("Virtual Keyboard")
-            except: pass
-
-    def close(self):
-        self.visible = False
-        try: cv2.destroyWindow("Virtual Keyboard")
-        except: pass
-
-    def update_gaze(self, kx, ky):
-        """Feed gaze in keyboard-window pixels. Returns activated key or None."""
-        if not self.visible:
-            return None
-        hit = next((lbl for lbl,x1,y1,x2,y2 in self.key_list
-                    if x1<=kx<x2 and y1<=ky<y2), None)
-        if hit != self.hovered_key:
-            self.hovered_key    = hit
-            self.dwell_start    = time.time() if hit else None
-            self.dwell_progress = 0.0
-            return None
-        if hit and self.dwell_start:
-            self.dwell_progress = min(1.0, (time.time()-self.dwell_start)/self.DWELL_TIME)
-            if self.dwell_progress >= 1.0 and time.time()-self.last_press_t > self.DWELL_TIME*0.8:
-                self._press(hit)
-                self.last_press_t   = time.time()
-                self.dwell_start    = time.time()
-                self.dwell_progress = 0.0
-                return hit
-        return None
-
-    def blink_press(self):
-        """Activate hovered key on left-blink."""
-        if self.hovered_key and self.visible and time.time()-self.last_press_t > 0.4:
-            self._press(self.hovered_key)
-            self.last_press_t   = time.time()
-            self.dwell_start    = time.time()
-            self.dwell_progress = 0.0
-            return self.hovered_key
-        return None
-
-    def _press(self, label):
-        self.last_pressed = label
-        if   label == "←":     self.typed_text = self.typed_text[:-1]
-        elif label == "SPACE": self.typed_text += " "
-        elif label == "CLEAR": self.typed_text = ""
-        elif label == "CLOSE": self.close()
-        elif label == "ENTER":
-            text = self.typed_text.strip()
-            if text:
-                if self._textpad is not None:
-                    self._textpad.append(text)   # ← send to TextPad
-                elif MOUSE_AVAILABLE:
-                    pyautogui.write(text, interval=0.03)
-            self.typed_text = ""
-        else:
-            self.typed_text += label
-
-    # ── render ────────────────────────────────────────────────────────────────
-    def render(self):
-        if not self.visible:
-            return
-        img = np.full((self._canvas_h, self._canvas_w, 3), (20, 20, 30), dtype=np.uint8)
-
-        # typed-text bar
-        cv2.rectangle(img, (self.MARGIN, 6), (self._canvas_w-self.MARGIN, self.TEXT_H-6), (40,40,60), -1)
-        cv2.rectangle(img, (self.MARGIN, 6), (self._canvas_w-self.MARGIN, self.TEXT_H-6), (80,80,120), 1)
-        disp = self.typed_text[-48:] if self.typed_text else "▮  start typing…"
-        col  = (220,220,255) if self.typed_text else (80,80,100)
-        cv2.putText(img, disp, (self.MARGIN+8, self.TEXT_H-16),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, col, 1, cv2.LINE_AA)
-
-        now = time.time()
-        for label, x1, y1, x2, y2 in self.key_list:
-            hov  = label == self.hovered_key
-            prs  = label == self.last_pressed and now-self.last_press_t < 0.3
-            spec = label in ("←","SPACE","ENTER","CLEAR","CLOSE")
-            bg   = (0,200,100) if prs else (60,80,140) if hov else (40,40,70) if spec else (35,35,55)
-            cv2.rectangle(img, (x1+2,y1+2), (x2-2,y2-2), bg, -1)
-            if hov and self.dwell_progress > 0:
-                cx2,cy2 = (x1+x2)//2, (y1+y2)//2
-                r = min(x2-x1, y2-y1)//2-4
-                cv2.ellipse(img, (cx2,cy2), (r,r), -90, 0, int(360*self.dwell_progress), (0,220,255), 3)
-            cv2.rectangle(img, (x1+2,y1+2), (x2-2,y2-2), (0,220,255) if hov else (55,55,80), 1)
-            fs   = 0.55 if len(label)>1 else 0.68
-            tsz  = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, fs, 1)[0]
-            tx   = x1+(x2-x1-tsz[0])//2;  ty = y1+(y2-y1+tsz[1])//2
-            cv2.putText(img, label, (tx,ty), cv2.FONT_HERSHEY_SIMPLEX, fs,
-                        (10,10,10) if prs else (220,230,255), 1, cv2.LINE_AA)
-
-        cv2.putText(img, "Gaze-dwell or LEFT blink  |  ENTER sends to Text Pad  |  K=close",
-                    (self.MARGIN, self._canvas_h-6),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.36, (70,70,90), 1, cv2.LINE_AA)
-        cv2.imshow("Virtual Keyboard", img)
-
-
-# =============================================================================
-#  TEXT PAD  — dedicated notepad window; receives text from keyboard ENTER
-# =============================================================================
-class TextPad:
-    DWELL_TIME = 1.0
-    PAD_W = 700;  PAD_H = 500
-    MARGIN = 18;  BTN_H = 52;  BTN_GAP = 10
-    LINE_H = 28;  FONT_SCALE = 0.60
-    FONT   = cv2.FONT_HERSHEY_SIMPLEX
-
-    # Fixed window position on screen — gaze mapping uses these offsets
-    PAD_WIN_X = 50    # pixels from left edge of screen
-    PAD_WIN_Y = 80    # pixels from top edge of screen
-
-    # (display label, action key, button color BGR)
-    BUTTONS = [
-        ("SAVE TO .TXT", "save",  (0, 110, 180)),
-        ("CLEAR ALL",    "clear", (120, 55, 0)),
-        ("CLOSE PAD",    "close", (60, 0, 100)),
-    ]
-
-    def __init__(self):
-        self.visible      = False
-        self.buffer       = ""
-        self._hovered     = None   # currently hovered button action key
-        self._dwell_start = None
-        self._dwell_prog  = 0.0
-        self._last_act_t  = 0.0
-        self._flash_msg   = ""
-        self._flash_t     = 0.0
-        self._cooldown    = 1.5
-        self._gaze_dot    = None   # (x, y) in pad-window pixels, drawn as indicator
-
-        # pre-compute button rects
-        total_w = self.PAD_W - 2*self.MARGIN
-        n  = len(self.BUTTONS)
-        bw = (total_w - (n-1)*self.BTN_GAP) // n
-        by = self.PAD_H - self.MARGIN - self.BTN_H
-        self._btn_rects = []   # (action, x1, y1, x2, y2)
-        bx = self.MARGIN
-        for _, action, _ in self.BUTTONS:
-            self._btn_rects.append((action, bx, by, bx+bw, by+self.BTN_H))
-            bx += bw + self.BTN_GAP
-
-    # ── text area ─────────────────────────────────────────────────────────────
-    @property
-    def _text_area(self):
-        x1 = self.MARGIN
-        y1 = self.MARGIN + 36
-        x2 = self.PAD_W - self.MARGIN
-        y2 = self.PAD_H - self.MARGIN - self.BTN_H - self.BTN_GAP - 12
-        return x1, y1, x2, y2
-
-    # ── public API ────────────────────────────────────────────────────────────
-    def toggle(self):
-        self.visible = not self.visible
-        if not self.visible:
-            try: cv2.destroyWindow("Text Pad")
-            except: pass
-
-    def close(self):
-        self.visible = False
-        try: cv2.destroyWindow("Text Pad")
-        except: pass
-
-    def append(self, text: str):
-        """Add a sentence/word from the virtual keyboard."""
-        if self.buffer and not self.buffer.endswith(" "):
-            self.buffer += " "
-        self.buffer += text
-        self.visible = True          # auto-open pad when text arrives
-        self._flash("Added to pad!")
-        print(f"[TextPad] Received: {text!r}  (total {len(self.buffer)} chars)")
-
-    def save_now(self):
-        """Called directly by keyboard shortcut S — always works."""
-        self._save()
-
-    def update_gaze(self, screen_x: float, screen_y: float):
-        """
-        Feed smoothed SCREEN pixel coords.
-        Converts to pad-window coords using fixed window position,
-        then checks button hit and runs dwell logic.
-        Returns triggered action or None.
-        """
-        if not self.visible:
-            return None
-        # Convert screen coords → pad-window local coords
-        kx = int(screen_x - self.PAD_WIN_X)
-        ky = int(screen_y - self.PAD_WIN_Y)
-        self._gaze_dot = (kx, ky)   # store for rendering
-
-        hit = next((act for act,x1,y1,x2,y2 in self._btn_rects
-                    if x1<=kx<x2 and y1<=ky<y2), None)
-        if hit != self._hovered:
-            self._hovered     = hit
-            self._dwell_start = time.time() if hit else None
-            self._dwell_prog  = 0.0
-            return None
-        if hit and self._dwell_start:
-            self._dwell_prog = min(1.0, (time.time()-self._dwell_start)/self.DWELL_TIME)
-            if self._dwell_prog >= 1.0 and time.time()-self._last_act_t > self._cooldown:
-                self._last_act_t  = time.time()
-                self._dwell_start = time.time()
-                self._dwell_prog  = 0.0
-                self._do(hit)
-                return hit
-        return None
-
-    def blink_press(self):
-        """Trigger hovered button on left blink."""
-        if self._hovered and self.visible and time.time()-self._last_act_t > 0.5:
-            self._do(self._hovered)
-            self._last_act_t = time.time()
-            return self._hovered
-        return None
-
-    def _do(self, action: str):
-        if   action == "save":  self._save()
-        elif action == "clear":
-            self.buffer = ""
-            self._flash("Cleared!")
-        elif action == "close": self.close()
-
-    def _save(self):
-        if not self.buffer.strip():
-            self._flash("Nothing to save!")
-            return
-        fname = "typed_text_" + datetime.datetime.now().strftime("%Y%m%d_%H%M%S") + ".txt"
-        try:
-            with open(fname, "w", encoding="utf-8") as f:
-                f.write(self.buffer.strip())
-            self._flash(f"Saved: {fname}")
-            print(f"[TextPad] Saved → {fname}")
-        except Exception as e:
-            self._flash("Save failed!")
-            print(f"[TextPad] Save error: {e}")
-
-    def _flash(self, msg: str):
-        self._flash_msg = msg
-        self._flash_t   = time.time()
-
-    # ── word-wrap ─────────────────────────────────────────────────────────────
-    def _wrap(self, text: str, max_w: int):
-        lines, cur = [], ""
-        for word in text.split(" "):
-            test = (cur + " " + word).strip()
-            tw   = cv2.getTextSize(test, self.FONT, self.FONT_SCALE, 1)[0][0]
-            if tw <= max_w:
-                cur = test
-            else:
-                if cur: lines.append(cur)
-                cur = word
-        if cur: lines.append(cur)
-        return lines
-
-    # ── render ────────────────────────────────────────────────────────────────
-    def render(self):
-        if not self.visible:
-            return
-        img = np.full((self.PAD_H, self.PAD_W, 3), (14, 14, 22), dtype=np.uint8)
-
-        # title bar
-        cv2.rectangle(img, (0,0), (self.PAD_W, 34), (25,25,42), -1)
-        cv2.putText(img, "Text Pad  —  Gaze-to-Type Buffer   |   S = save now",
-                    (self.MARGIN, 24), self.FONT, 0.50, (160,200,255), 1, cv2.LINE_AA)
-        cv2.line(img, (0,34), (self.PAD_W,34), (50,50,80), 1)
-
-        # text area
-        tx1, ty1, tx2, ty2 = self._text_area
-        cv2.rectangle(img, (tx1-4,ty1-4), (tx2+4,ty2+4), (22,22,35), -1)
-        cv2.rectangle(img, (tx1-4,ty1-4), (tx2+4,ty2+4), (50,50,80), 1)
-
-        placeholder = "[ Start typing with the virtual keyboard, then press ENTER ]"
-        raw = self.buffer if self.buffer else placeholder
-        lines = self._wrap(raw, tx2-tx1)
-        max_lines = (ty2-ty1)//self.LINE_H
-        vis_lines = lines[-max_lines:]
-        col = (210,220,255) if self.buffer else (65,65,85)
-        for i, line in enumerate(vis_lines):
-            cv2.putText(img, line, (tx1, ty1+(i+1)*self.LINE_H),
-                        self.FONT, self.FONT_SCALE, col, 1, cv2.LINE_AA)
-
-        # blinking cursor
-        if self.buffer and int(time.time()*2)%2 == 0 and vis_lines:
-            lw = cv2.getTextSize(vis_lines[-1], self.FONT, self.FONT_SCALE, 1)[0][0]
-            cx2 = tx1+lw+4;  cy2 = ty1+len(vis_lines)*self.LINE_H
-            lh  = cv2.getTextSize("A", self.FONT, self.FONT_SCALE, 1)[0][1]
-            cv2.line(img, (cx2, cy2-lh-2), (cx2, cy2+4), (0,220,255), 2)
-
-        # char / word count
-        wc  = len(self.buffer.split()) if self.buffer.strip() else 0
-        cv2.putText(img, f"{len(self.buffer)} chars  |  {wc} words",
-                    (tx1, ty2+18), self.FONT, 0.40, (80,80,110), 1, cv2.LINE_AA)
-
-        # buttons
-        for (disp, action, base_col), (act2, x1, y1, x2, y2) in zip(self.BUTTONS, self._btn_rects):
-            hov = self._hovered == action
-            bg  = tuple(min(255, int(c*1.6)) for c in base_col) if hov else base_col
-            cv2.rectangle(img, (x1,y1), (x2,y2), bg, -1)
-            if hov and self._dwell_prog > 0:
-                ccx, ccy = (x1+x2)//2, (y1+y2)//2
-                r = min(x2-x1, y2-y1)//2-4
-                cv2.ellipse(img, (ccx,ccy), (r,r), -90, 0, int(360*self._dwell_prog), (0,255,200), 3)
-            cv2.rectangle(img, (x1,y1), (x2,y2), (0,220,255) if hov else (60,60,90), 1)
-            fs  = 0.48
-            tsz = cv2.getTextSize(disp, self.FONT, fs, 1)[0]
-            cv2.putText(img, disp, (x1+(x2-x1-tsz[0])//2, y1+(y2-y1+tsz[1])//2),
-                        self.FONT, fs, (230,240,255), 1, cv2.LINE_AA)
-
-        # flash message
-        now = time.time()
-        if now-self._flash_t < 2.5 and self._flash_msg:
-            fade = min(1.0, (2.5-(now-self._flash_t))/0.5)
-            fc   = tuple(int(c*fade) for c in (0, 255, 160))
-            cv2.putText(img, self._flash_msg,
-                        (self.MARGIN, self.PAD_H-self.MARGIN-self.BTN_H-24),
-                        self.FONT, 0.62, fc, 2, cv2.LINE_AA)
-
-        # ── gaze dot indicator on the pad itself ──────────────────────────────
-        if self._gaze_dot:
-            gx, gy = self._gaze_dot
-            if 0 <= gx < self.PAD_W and 0 <= gy < self.PAD_H:
-                cv2.circle(img, (gx, gy), 7, (0, 220, 255), -1, cv2.LINE_AA)
-                cv2.circle(img, (gx, gy), 7, (0, 0, 0),     1,  cv2.LINE_AA)
-                cv2.circle(img, (gx, gy), 14, (0, 180, 200), 1, cv2.LINE_AA)
-
-        # hint
-        cv2.putText(img, "Gaze-dwell or left-blink buttons  |  S=save  T=toggle  ESC=end",
-                    (self.MARGIN, self.PAD_H-5), self.FONT, 0.33, (55,55,75), 1, cv2.LINE_AA)
-
-        # pin window to fixed screen position so gaze mapping is accurate
-        cv2.imshow("Text Pad", img)
-        cv2.moveWindow("Text Pad", self.PAD_WIN_X, self.PAD_WIN_Y)
-
-
-# =============================================================================
-#  ATTENTION TRACKER  v5
-# =============================================================================
 class AttentionTracker:
 
     def __init__(self):
@@ -528,10 +92,10 @@ class AttentionTracker:
 
         # ── Gaze smoothing ────────────────────────────────────────────────── #
         self.GAZE_ALPHA  = 0.15
-        self.gaze_sx_sm  = None   # smoothed screen x
-        self.gaze_sy_sm  = None   # smoothed screen y
+        self.gaze_sx_sm  = None
+        self.gaze_sy_sm  = None
         self.mouse_mode  = True
-        self.gaze_calib  = [0.35, 0.65, 0.30, 0.70]  # [xmin,xmax,ymin,ymax]
+        self.gaze_calib  = [0.35, 0.65, 0.30, 0.70]
 
         # ── Drowsiness ────────────────────────────────────────────────────── #
         self.DROWSY_FRAMES   = int(self.fps_cam * 2.5)
@@ -555,11 +119,11 @@ class AttentionTracker:
         self.head_status     = "FORWARD"
         self.attn_history    = deque(maxlen=150)
 
-        # ── Sub-systems ───────────────────────────────────────────────────── #
+        # ── Sub-systems (imported from other files) ────────────────────────── #
         self.gaze_cursor = GazeCursor()
         self.vkb         = VirtualKeyboard()
         self.pad         = TextPad()
-        self.vkb.link_textpad(self.pad)   # ← ENTER on keyboard → TextPad
+        self.vkb.link_textpad(self.pad)   # ENTER on keyboard → TextPad
 
         print("\n╔══════════════════════════════════════════════╗")
         print("║   Attention Tracker v5                      ║")
@@ -838,7 +402,7 @@ class AttentionTracker:
                 rear = self._ear(re)
                 now  = time.time()
 
-                # ── left blink ────────────────────────────────────────────── #
+                # left blink
                 if lear < self.EAR_TH_L:
                     self.l_blink_ctr += 1;  self.drowsy_ctr += 1
                 else:
@@ -854,7 +418,7 @@ class AttentionTracker:
                             self.last_l_click = now
                     self.l_blink_ctr = 0
 
-                # ── right blink ───────────────────────────────────────────── #
+                # right blink
                 if rear < self.EAR_TH_R:
                     self.r_blink_ctr += 1;  self.drowsy_ctr += 1
                 else:
@@ -871,20 +435,18 @@ class AttentionTracker:
                 if lear >= self.EAR_TH_L and rear >= self.EAR_TH_R:
                     self.drowsy_ctr = max(0, self.drowsy_ctr-1)
 
-                # gaze direction label
                 self.gaze_dir = self._gaze_dir_label(lm, w, h)
 
-                # head pose
                 if res.facial_transformation_matrixes:
                     self.head_status = self._head_pose(res.facial_transformation_matrixes[0])
 
-                # ── raw gaze (average both irises) ────────────────────────── #
+                # raw gaze — average both irises
                 gx = ((lm[self.LEFT_IRIS[0]].x+lm[self.LEFT_IRIS[2]].x)/2
                     + (lm[self.RIGHT_IRIS[0]].x+lm[self.RIGHT_IRIS[2]].x)/2) / 2
                 gy = ((lm[self.LEFT_IRIS[0]].y+lm[self.LEFT_IRIS[2]].y)/2
                     + (lm[self.RIGHT_IRIS[0]].y+lm[self.RIGHT_IRIS[2]].y)/2) / 2
 
-                # ── unified smoothing ─────────────────────────────────────── #
+                # unified smoothing
                 sx_r, sy_r = self._gaze_to_screen(gx, gy)
                 if self.gaze_sx_sm is None:
                     self.gaze_sx_sm, self.gaze_sy_sm = sx_r, sy_r
@@ -892,26 +454,25 @@ class AttentionTracker:
                     self.gaze_sx_sm += self.GAZE_ALPHA*(sx_r-self.gaze_sx_sm)
                     self.gaze_sy_sm += self.GAZE_ALPHA*(sy_r-self.gaze_sy_sm)
 
-                # ── mouse movement ────────────────────────────────────────── #
+                # mouse movement
                 if MOUSE_AVAILABLE and self.mouse_mode and not self.vkb.visible and not self.pad.visible:
                     pyautogui.moveTo(int(self.gaze_sx_sm), int(self.gaze_sy_sm))
 
-                # ── gaze → virtual keyboard ───────────────────────────────── #
+                # gaze → virtual keyboard
                 if self.vkb.visible:
                     kw, kh = self.vkb.window_size
                     kx = int((self.gaze_sx_sm/self.screen_w)*kw)
                     ky = int((self.gaze_sy_sm/self.screen_h)*kh)
                     self.vkb.update_gaze(kx, ky)
 
-                # ── gaze → text pad buttons ───────────────────────────────── #
+                # gaze → text pad buttons
                 if self.pad.visible and not self.vkb.visible:
-                    # Pass raw smoothed screen coords — pad converts using PAD_WIN_X/Y
                     self.pad.update_gaze(self.gaze_sx_sm, self.gaze_sy_sm)
 
-                # ── gaze cursor update ────────────────────────────────────── #
+                # gaze cursor overlay
                 self.gaze_cursor.update(gx, gy)
 
-                # ── attention rolling window ──────────────────────────────── #
+                # attention rolling window
                 self.rolling_gaze.append((ts, gx, gy))
                 self._update_attention(ts)
 
@@ -924,12 +485,12 @@ class AttentionTracker:
             else:
                 self.drowsy_ctr = max(0, self.drowsy_ctr-1)
 
-            # ── FPS ───────────────────────────────────────────────────────── #
+            # FPS
             now2 = time.time()
             fps  = 1.0/(now2-self.prev_time+1e-9)
             self.prev_time = now2
 
-            # ── render ────────────────────────────────────────────────────── #
+            # render
             if face_ok:
                 self.gaze_cursor.draw(frame)
             self._draw_hud(frame, fps, ts, lear, rear)
@@ -937,13 +498,13 @@ class AttentionTracker:
             self.vkb.render()
             self.pad.render()
 
-            # ── key handling ──────────────────────────────────────────────── #
+            # key handling
             key = cv2.waitKey(1) & 0xFF
-            if   key == 27:                  break                         # ESC
+            if   key == 27:                  break
             elif key in (ord('m'),ord('M')): self.mouse_mode = not self.mouse_mode
             elif key in (ord('k'),ord('K')): self.vkb.toggle()
             elif key in (ord('t'),ord('T')): self.pad.toggle()
-            elif key in (ord('s'),ord('S')): self.pad.save_now()          # S = save
+            elif key in (ord('s'),ord('S')): self.pad.save_now()
             elif key in (ord('g'),ord('G')): self.gaze_cursor.active = not self.gaze_cursor.active
 
         self.cap.release()
@@ -1060,12 +621,3 @@ class AttentionTracker:
         plt.savefig("session_report.png", dpi=140, bbox_inches="tight", facecolor="#0d0d0d")
         print("[INFO] session_report.png saved.")
         plt.show()
-
-
-# =============================================================================
-#  ENTRY POINT
-# =============================================================================
-if __name__ == "__main__":
-    tracker = AttentionTracker()
-    tracker.calibrate(duration=3)
-    tracker.run()
