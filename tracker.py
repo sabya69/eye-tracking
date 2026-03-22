@@ -1,10 +1,3 @@
-# ============================================================
-#  FILE: tracker.py
-#  Paste this file as-is into your eye_tracker/ folder.
-#  Imports GazeCursor, VirtualKeyboard, TextPad from the
-#  other files in the same folder.
-# ============================================================
-
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -91,11 +84,13 @@ class AttentionTracker:
         self.last_l_click    = 0.0;  self.last_r_click = 0.0
 
         # ── Gaze smoothing ────────────────────────────────────────────────── #
-        self.GAZE_ALPHA  = 0.15
-        self.gaze_sx_sm  = None
-        self.gaze_sy_sm  = None
-        self.mouse_mode  = True
-        self.gaze_calib  = [0.35, 0.65, 0.30, 0.70]
+        self.GAZE_ALPHA      = 0.06   # lower = smoother cursor (was 0.15)
+        self.gaze_sx_sm      = None
+        self.gaze_sy_sm      = None
+        self.mouse_mode      = True
+        self.gaze_calib      = [0.35, 0.65, 0.30, 0.70]
+        self.MOUSE_SPEED_CAP = 40     # max pixels to move per frame
+        self.MOUSE_DEADZONE  = 4      # ignore jitter under this many pixels
 
         # ── Drowsiness ────────────────────────────────────────────────────── #
         self.DROWSY_FRAMES   = int(self.fps_cam * 2.5)
@@ -454,9 +449,20 @@ class AttentionTracker:
                     self.gaze_sx_sm += self.GAZE_ALPHA*(sx_r-self.gaze_sx_sm)
                     self.gaze_sy_sm += self.GAZE_ALPHA*(sy_r-self.gaze_sy_sm)
 
-                # mouse movement
+                # ── mouse movement (speed-capped + deadzone) ──────────────── #
                 if MOUSE_AVAILABLE and self.mouse_mode and not self.vkb.visible and not self.pad.visible:
-                    pyautogui.moveTo(int(self.gaze_sx_sm), int(self.gaze_sy_sm))
+                    tx = int(self.gaze_sx_sm)
+                    ty = int(self.gaze_sy_sm)
+                    cx, cy = pyautogui.position()
+                    dx = tx - cx
+                    dy = ty - cy
+                    dist = (dx**2 + dy**2) ** 0.5
+                    if dist > self.MOUSE_DEADZONE:
+                        if dist > self.MOUSE_SPEED_CAP:
+                            scale = self.MOUSE_SPEED_CAP / dist
+                            dx = int(dx * scale)
+                            dy = int(dy * scale)
+                        pyautogui.moveRel(dx, dy)
 
                 # gaze → virtual keyboard
                 if self.vkb.visible:

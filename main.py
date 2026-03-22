@@ -1,11 +1,3 @@
-# ============================================================
-#  FILE: main.py
-#  This is the ONLY file you run.
-#
-#  In VS Code terminal:
-#      pip install -r requirements.txt
-#      python main.py
-# ============================================================
 
 from tracker import AttentionTracker
 

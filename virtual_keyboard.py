@@ -1,8 +1,3 @@
-# ============================================================
-#  FILE: virtual_keyboard.py
-#  Paste this file as-is into your eye_tracker/ folder.
-#  No changes needed.
-# ============================================================
 
 import cv2
 import numpy as np
