@@ -1,788 +1,628 @@
 """
-GazeOS Launcher
-===============
-Run this instead of main.py:
-    python launcher.py
+GazeOS  —  Launcher
+====================
+python launcher.py
 
-A simple window appears with 4 buttons:
-  1. Start Eye Tracker  → runs calibration + opens the CV2 tracker window
-                          (which already has the keyboard K and text pad T built in)
-  2. Notepad            → standalone tkinter text editor
-  3. Snake Game         → playable with keyboard arrows
-  4. Word Shortcuts     → searchable cheatsheet
-
-All files (tracker.py, gaze_cursor.py, virtual_keyboard.py, text_pad.py,
-face_landmarker.task) must be in the SAME folder as this file.
+Requires in the same folder:
+  tracker.py · gaze_cursor.py · virtual_keyboard.py
+  text_pad.py · face_landmarker.task
 """
 
 import tkinter as tk
 from tkinter import font as tkfont, filedialog
-import threading, subprocess, sys, os, datetime, random
+import subprocess, sys, os, datetime, random
 
-# ── colours ──────────────────────────────────────────────────────────────────
-BG     = "#0d1117"
-PANEL  = "#161b22"
-BORDER = "#30363d"
-CYAN   = "#00e5ff"
-GREEN  = "#3fb950"
-AMBER  = "#e3b341"
-PINK   = "#f778ba"
-WHITE  = "#e6edf3"
-MUTED  = "#8b949e"
-DARK   = "#010409"
+# ── palette ───────────────────────────────────────────────────────────────────
+BG      = "#F5F6F8"
+SURFACE = "#FFFFFF"
+BORDER  = "#DDE1E7"
+SEP     = "#E5E7EB"
+TEXT    = "#1A1D23"
+MUTED   = "#6B7280"
+ACCENT  = "#2563EB"
+GREEN   = "#16A34A"
+AMBER   = "#D97706"
+PURPLE  = "#7C3AED"
+DANGER  = "#DC2626"
+
+# ── font stack ────────────────────────────────────────────────────────────────
+FH  = ("Segoe UI", 10, "bold")   # card heading
+FB  = ("Segoe UI",  9)           # body
+FS  = ("Segoe UI",  8)           # small / muted
+FT  = ("Segoe UI", 17, "bold")   # app title
+FM  = ("Consolas",  9)           # mono
+
+
+def _sep(parent):
+    tk.Frame(parent, bg=SEP, height=1).pack(fill="x")
+
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  MAIN LAUNCHER WINDOW
+#  LAUNCHER
 # ─────────────────────────────────────────────────────────────────────────────
 class Launcher(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("GazeOS  —  Attention Tracker")
+        self.title("GazeOS")
         self.configure(bg=BG)
         self.resizable(False, False)
-        self._tracker_proc = None   # subprocess for the tracker
+        self._proc = None
         self._build()
         self._center()
-
-    # ── layout ───────────────────────────────────────────────────────────────
-    def _build(self):
-        # ── top bar ──────────────────────────────────────────────────────────
-        top = tk.Frame(self, bg=PANEL, pady=14, padx=20)
-        top.pack(fill="x")
-
-        # eye icon (drawn with canvas)
-        eye_c = tk.Canvas(top, width=36, height=36, bg=PANEL, highlightthickness=0)
-        eye_c.pack(side="left")
-        eye_c.create_oval(3, 10, 33, 26, outline=CYAN, width=2)
-        eye_c.create_oval(14, 13, 22, 23, fill=CYAN, outline="")
-        eye_c.create_oval(16, 15, 20, 21, fill=DARK, outline="")
-
-        tk.Label(top, text="  GazeOS", fg=CYAN, bg=PANEL,
-                 font=tkfont.Font(family="Consolas", size=20, weight="bold")
-                 ).pack(side="left")
-        tk.Label(top, text="  v5", fg=MUTED, bg=PANEL,
-                 font=tkfont.Font(family="Consolas", size=11)
-                 ).pack(side="left", pady=6)
-
-        # clock
-        self._clock_v = tk.StringVar()
-        tk.Label(top, textvariable=self._clock_v, fg=MUTED, bg=PANEL,
-                 font=tkfont.Font(family="Consolas", size=10)
-                 ).pack(side="right")
         self._tick()
 
-        tk.Frame(self, bg=BORDER, height=1).pack(fill="x")
+    def _build(self):
+        # header
+        hdr = tk.Frame(self, bg=SURFACE, padx=28, pady=20)
+        hdr.pack(fill="x")
 
-        # ── subtitle ─────────────────────────────────────────────────────────
-        tk.Label(self, text="Click a button to open a module",
-                 fg=MUTED, bg=BG,
-                 font=tkfont.Font(family="Consolas", size=9)
-                 ).pack(pady=(14, 4))
+        lf = tk.Frame(hdr, bg=SURFACE)
+        lf.pack(side="left")
+        tk.Label(lf, text="GazeOS", bg=SURFACE, fg=TEXT,
+                 font=FT).pack(anchor="w")
+        tk.Label(lf, text="Eye-Tracker",
+                 bg=SURFACE, fg=MUTED, font=FS).pack(anchor="w")
 
-        # ── 4 big buttons ────────────────────────────────────────────────────
-        grid = tk.Frame(self, bg=BG, padx=28, pady=8)
-        grid.pack()
+        rf = tk.Frame(hdr, bg=SURFACE)
+        rf.pack(side="right")
+        self._clock_v = tk.StringVar()
+        tk.Label(rf, textvariable=self._clock_v,
+                 bg=SURFACE, fg=MUTED, font=FM).pack(anchor="e")
+        tk.Label(rf, text="Group 10 Mini Project",
+                 bg=SURFACE, fg=MUTED, font=FS).pack(anchor="e")
 
-        btn_data = [
-            ("👁  Start Eye Tracker",
-             "Calibrate + open webcam\nKeyboard (K) · TextPad (T) inside",
-             CYAN,  self._open_tracker),
+        _sep(self)
 
-            ("📝  Notepad",
-             "Text editor · save / open\nLeft-blink saves (when tracker on)",
-             GREEN, self._open_notepad),
+        # 2×2 module cards
+        body = tk.Frame(self, bg=BG, padx=24, pady=20)
+        body.pack()
 
-            ("🎮  Snake Game",
-             "Arrow keys to play\nLeft-blink = up  (when tracker on)",
-             AMBER, self._open_game),
-
-            ("📋  Word Shortcuts",
-             "50+ MS Word hotkeys\nSearchable cheatsheet",
-             PINK,  self._open_shortcuts),
+        modules = [
+            ("Eye Tracker",    "Calibrate & start gaze tracking",       ACCENT,  self._start_tracker),
+            ("Notepad",        "Text editor  ·  save / open files",      GREEN,   lambda: NotepadWindow(self)),
+            ("Snake Game",     "Arrow keys or WASD to play",             AMBER,   lambda: GameWindow(self)),
+            ("Word Shortcuts", "Searchable MS Word keyboard shortcuts",  PURPLE,  lambda: ShortcutsWindow(self)),
         ]
 
-        for i, (title, sub, color, cmd) in enumerate(btn_data):
+        for i, (name, desc, color, cmd) in enumerate(modules):
             r, c = divmod(i, 2)
-            tile = _Tile(grid, title, sub, color, cmd)
-            tile.grid(row=r, column=c, padx=10, pady=10)
+            _Card(body, name, desc, color, cmd).grid(
+                row=r, column=c, padx=8, pady=8)
 
-        # ── tracker status bar ───────────────────────────────────────────────
-        tk.Frame(self, bg=BORDER, height=1).pack(fill="x", pady=(8, 0))
-        status_row = tk.Frame(self, bg=PANEL, pady=6, padx=20)
-        status_row.pack(fill="x")
+        _sep(self)
 
-        self._status_dot = tk.Label(status_row, text="●", fg=MUTED, bg=PANEL,
-                                    font=tkfont.Font(family="Consolas", size=10))
-        self._status_dot.pack(side="left")
-        self._status_v = tk.StringVar(value="  Tracker not running")
-        tk.Label(status_row, textvariable=self._status_v,
-                 fg=MUTED, bg=PANEL,
-                 font=tkfont.Font(family="Consolas", size=9)
-                 ).pack(side="left")
+        # status bar
+        sb = tk.Frame(self, bg=SURFACE, padx=28, pady=9)
+        sb.pack(fill="x")
 
-        tk.Label(status_row,
-                 text="Sabyasachi Das Biswas · CV Mini Project 2026",
-                 fg=MUTED, bg=PANEL,
-                 font=tkfont.Font(family="Consolas", size=8)
-                 ).pack(side="right")
+        self._dot = tk.Label(sb, text="●", fg=BORDER, bg=SURFACE, font=FS)
+        self._dot.pack(side="left")
 
-    # ── clock ─────────────────────────────────────────────────────────────────
+        self._sv = tk.StringVar(value="  Tracker not running")
+        tk.Label(sb, textvariable=self._sv, bg=SURFACE, fg=MUTED,
+                 font=FS).pack(side="left")
+
+        self._stop_btn = tk.Button(
+            sb, text="Stop Tracker", command=self._stop,
+            bg=SURFACE, fg=DANGER, activebackground=BG,
+            activeforeground=DANGER, relief="flat", bd=0,
+            font=FS, cursor="hand2")
+        # shown only when running
+
+    # ── tracker control ───────────────────────────────────────────────────────
+    def _start_tracker(self):
+        if self._proc and self._proc.poll() is None:
+            self._flash("Tracker is already running.")
+            return
+        script = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "_run.py")
+        with open(script, "w") as f:
+            f.write("from tracker import AttentionTracker\n"
+                    "t = AttentionTracker()\n"
+                    "t.calibrate(duration=3)\n"
+                    "t.run()\n")
+        self._proc = subprocess.Popen(
+            [sys.executable, script],
+            cwd=os.path.dirname(os.path.abspath(__file__)))
+        self._dot.config(fg=GREEN)
+        self._sv.set("  Tracker running  —  K = keyboard   T = text pad   ESC = stop")
+        self._stop_btn.pack(side="right")
+        self._poll()
+
+    def _stop(self):
+        if self._proc: self._proc.terminate()
+        self._dot.config(fg=BORDER)
+        self._sv.set("  Tracker stopped")
+        self._stop_btn.pack_forget()
+
+    def _poll(self):
+        if self._proc and self._proc.poll() is not None:
+            self._dot.config(fg=BORDER)
+            self._sv.set("  Tracker finished")
+            self._stop_btn.pack_forget()
+        else:
+            self.after(1000, self._poll)
+
+    def _flash(self, msg):
+        old = self._sv.get()
+        self._sv.set(f"  {msg}")
+        self.after(3000, lambda: self._sv.set(old))
+
     def _tick(self):
         self._clock_v.set(datetime.datetime.now().strftime("%H:%M:%S"))
         self.after(1000, self._tick)
 
-    # ── centre on screen ──────────────────────────────────────────────────────
     def _center(self):
         self.update_idletasks()
         w = self.winfo_width();  h = self.winfo_height()
-        sw = self.winfo_screenwidth();  sh = self.winfo_screenheight()
-        self.geometry(f"+{(sw - w)//2}+{(sh - h)//2}")
+        sw = self.winfo_screenwidth(); sh = self.winfo_screenheight()
+        self.geometry(f"+{(sw-w)//2}+{(sh-h)//2}")
 
-    # ── button actions ────────────────────────────────────────────────────────
-    def _open_tracker(self):
-        """Launch tracker.py in a subprocess so it gets its own CV2 windows."""
-        if self._tracker_proc and self._tracker_proc.poll() is None:
-            # already running
-            self._flash("Tracker already running! Use K / T in CV2 window.")
-            return
-        script = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                              "tracker_run.py")
-        # write a tiny runner so we don't depend on main.py name
-        runner = (
-            "from tracker import AttentionTracker\n"
-            "t = AttentionTracker()\n"
-            "t.calibrate(duration=3)\n"
-            "t.run()\n"
-        )
-        with open(script, "w") as f:
-            f.write(runner)
-
-        self._tracker_proc = subprocess.Popen(
-            [sys.executable, script],
-            cwd=os.path.dirname(os.path.abspath(__file__))
-        )
-        self._status_dot.config(fg=GREEN)
-        self._status_v.set("  Tracker running  —  K=keyboard  T=textpad  ESC=stop")
-        self._poll_tracker()
-
-    def _poll_tracker(self):
-        """Check every second if the tracker subprocess is still alive."""
-        if self._tracker_proc and self._tracker_proc.poll() is not None:
-            self._status_dot.config(fg=MUTED)
-            self._status_v.set("  Tracker stopped")
-        else:
-            self.after(1000, self._poll_tracker)
-
-    def _open_notepad(self):
-        NotepadWindow(self)
-
-    def _open_game(self):
-        GameWindow(self)
-
-    def _open_shortcuts(self):
-        ShortcutsWindow(self)
-
-    # ── flash message in status bar ──────────────────────────────────────────
-    def _flash(self, msg):
-        self._status_v.set(f"  {msg}")
-        self.after(3000, lambda: self._status_v.set(
-            "  Tracker running" if (self._tracker_proc and
-                                    self._tracker_proc.poll() is None)
-            else "  Tracker not running"))
+    def destroy(self):
+        if self._proc and self._proc.poll() is None:
+            self._proc.terminate()
+        super().destroy()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  TILE WIDGET  (the big buttons)
+#  MODULE CARD  (button tile)
 # ─────────────────────────────────────────────────────────────────────────────
-class _Tile(tk.Frame):
-    W = 240;  H = 120
+class _Card(tk.Frame):
+    W = 220;  H = 82
 
-    def __init__(self, parent, title, subtitle, color, command):
-        super().__init__(parent, bg=PANEL, width=self.W, height=self.H,
+    def __init__(self, parent, name, desc, color, cmd):
+        super().__init__(parent, bg=SURFACE, width=self.W, height=self.H,
                          highlightbackground=BORDER, highlightthickness=1,
                          cursor="hand2")
         self.pack_propagate(False)
-        self._color   = color
-        self._command = command
+        self._color = color
+        self._cmd   = cmd
 
-        # coloured top stripe
-        tk.Frame(self, bg=color, height=3).pack(fill="x")
+        # left accent bar
+        bar = tk.Frame(self, bg=color, width=4)
+        bar.pack(side="left", fill="y")
 
-        # title
-        self._title_lbl = tk.Label(
-            self, text=title, fg=WHITE, bg=PANEL,
-            font=tkfont.Font(family="Consolas", size=12, weight="bold"),
-            anchor="w", padx=14)
-        self._title_lbl.pack(fill="x", pady=(8, 2))
+        inner = tk.Frame(self, bg=SURFACE, padx=14, pady=12)
+        inner.pack(fill="both", expand=True)
 
-        # subtitle
-        self._sub_lbl = tk.Label(
-            self, text=subtitle, fg=MUTED, bg=PANEL,
-            font=tkfont.Font(family="Consolas", size=8),
-            anchor="w", padx=14, justify="left")
-        self._sub_lbl.pack(fill="x")
+        self._nl = tk.Label(inner, text=name, bg=SURFACE, fg=TEXT, font=FH, anchor="w")
+        self._nl.pack(fill="x")
 
-        # bind hover + click on every child too
-        for w in (self, self._title_lbl, self._sub_lbl):
-            w.bind("<Enter>",    self._hover_on)
-            w.bind("<Leave>",    self._hover_off)
-            w.bind("<Button-1>", lambda e: self._command())
+        self._dl = tk.Label(inner, text=desc, bg=SURFACE, fg=MUTED, font=FS, anchor="w")
+        self._dl.pack(fill="x")
 
-    def _hover_on(self, _=None):
-        self.configure(bg=DARK, highlightbackground=self._color)
-        self._title_lbl.configure(bg=DARK, fg=self._color)
-        self._sub_lbl.configure(bg=DARK)
+        for w in (self, bar, inner, self._nl, self._dl):
+            w.bind("<Enter>",    self._on)
+            w.bind("<Leave>",    self._off)
+            w.bind("<Button-1>", lambda e: self._cmd())
 
-    def _hover_off(self, _=None):
-        self.configure(bg=PANEL, highlightbackground=BORDER)
-        self._title_lbl.configure(bg=PANEL, fg=WHITE)
-        self._sub_lbl.configure(bg=PANEL)
+    def _on(self, _=None):
+        self.configure(highlightbackground=self._color)
+        self._nl.configure(fg=self._color)
+
+    def _off(self, _=None):
+        self.configure(highlightbackground=BORDER)
+        self._nl.configure(fg=TEXT)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  NOTEPAD  (standalone tkinter text editor)
+#  NOTEPAD
 # ─────────────────────────────────────────────────────────────────────────────
 class NotepadWindow(tk.Toplevel):
     def __init__(self, master):
         super().__init__(master)
         self.title("Notepad")
-        self.configure(bg=BG)
-        self.geometry("700x500")
-        self._filepath = None
+        self.configure(bg=SURFACE)
+        self.geometry("740x520")
+        self.minsize(480, 320)
+        self._path = None
         self._build()
         self._center()
 
     def _build(self):
-        mf = tkfont.Font(family="Consolas", size=9)
-        bf = tkfont.Font(family="Consolas", size=9, weight="bold")
-
-        # ── menu bar ─────────────────────────────────────────────────────────
-        menu = tk.Menu(self, bg=PANEL, fg=WHITE,
-                       activebackground=CYAN, activeforeground=BG, tearoff=0)
+        # menu bar
+        menu = tk.Menu(self, bg=SURFACE, fg=TEXT,
+                       activebackground=ACCENT, activeforeground=SURFACE,
+                       relief="flat", tearoff=0)
         self.config(menu=menu)
 
-        fm = tk.Menu(menu, bg=PANEL, fg=WHITE,
-                     activebackground=CYAN, activeforeground=BG, tearoff=0)
+        fm = tk.Menu(menu, bg=SURFACE, fg=TEXT,
+                     activebackground=ACCENT, activeforeground=SURFACE, tearoff=0)
         menu.add_cascade(label="File", menu=fm)
-        fm.add_command(label="New          Ctrl+N", command=self._new)
-        fm.add_command(label="Open...      Ctrl+O", command=self._open_file)
-        fm.add_command(label="Save         Ctrl+S", command=self._save)
-        fm.add_command(label="Save As...   Ctrl+Shift+S", command=self._save_as)
+        fm.add_command(label="New",     command=self._new,     accelerator="Ctrl+N")
+        fm.add_command(label="Open",    command=self._open,    accelerator="Ctrl+O")
+        fm.add_command(label="Save",    command=self._save,    accelerator="Ctrl+S")
+        fm.add_command(label="Save As", command=self._save_as, accelerator="Ctrl+Shift+S")
         fm.add_separator()
         fm.add_command(label="Exit", command=self.destroy)
 
-        em = tk.Menu(menu, bg=PANEL, fg=WHITE,
-                     activebackground=CYAN, activeforeground=BG, tearoff=0)
+        em = tk.Menu(menu, bg=SURFACE, fg=TEXT,
+                     activebackground=ACCENT, activeforeground=SURFACE, tearoff=0)
         menu.add_cascade(label="Edit", menu=em)
-        em.add_command(label="Cut     Ctrl+X",
-                       command=lambda: self._txt.event_generate("<<Cut>>"))
-        em.add_command(label="Copy    Ctrl+C",
-                       command=lambda: self._txt.event_generate("<<Copy>>"))
-        em.add_command(label="Paste   Ctrl+V",
-                       command=lambda: self._txt.event_generate("<<Paste>>"))
-        em.add_command(label="Select All  Ctrl+A",
-                       command=lambda: self._txt.tag_add("sel", "1.0", "end"))
+        em.add_command(label="Undo",       command=lambda: self._txt.edit_undo(),              accelerator="Ctrl+Z")
+        em.add_command(label="Redo",       command=lambda: self._txt.edit_redo(),              accelerator="Ctrl+Y")
         em.add_separator()
-        em.add_command(label="Undo  Ctrl+Z",
-                       command=lambda: self._txt.edit_undo())
-        em.add_command(label="Redo  Ctrl+Y",
-                       command=lambda: self._txt.edit_redo())
+        em.add_command(label="Cut",        command=lambda: self._txt.event_generate("<<Cut>>"),   accelerator="Ctrl+X")
+        em.add_command(label="Copy",       command=lambda: self._txt.event_generate("<<Copy>>"),  accelerator="Ctrl+C")
+        em.add_command(label="Paste",      command=lambda: self._txt.event_generate("<<Paste>>"), accelerator="Ctrl+V")
+        em.add_command(label="Select All", command=lambda: self._txt.tag_add("sel","1.0","end"),  accelerator="Ctrl+A")
 
-        # ── toolbar ──────────────────────────────────────────────────────────
-        tb = tk.Frame(self, bg=PANEL, pady=5)
+        # toolbar
+        tb = tk.Frame(self, bg=SURFACE, pady=6, padx=12)
         tb.pack(fill="x")
 
-        for label, cmd, color in [
-            ("NEW",     self._new,       WHITE),
-            ("OPEN",    self._open_file, WHITE),
-            ("SAVE",    self._save,      GREEN),
-            ("SAVE AS", self._save_as,   CYAN),
-        ]:
-            b = tk.Button(tb, text=label, command=cmd,
-                          bg=BG, fg=color,
-                          activebackground=color, activeforeground=BG,
-                          relief="flat", bd=0, font=bf,
-                          padx=10, pady=4, cursor="hand2")
-            b.pack(side="left", padx=3)
+        def tbtn(text, cmd, fg=TEXT, bold=False):
+            f = ("Segoe UI", 9, "bold") if bold else FB
+            b = tk.Button(tb, text=text, command=cmd, bg=SURFACE, fg=fg,
+                          activebackground=BG, activeforeground=fg,
+                          relief="flat", bd=0, font=f, padx=10, pady=3,
+                          cursor="hand2")
+            b.pack(side="left", padx=2)
 
-        # font size spinner
-        tk.Label(tb, text="│", fg=BORDER, bg=PANEL,
-                 font=mf).pack(side="left", padx=4)
-        tk.Label(tb, text="Size:", fg=MUTED, bg=PANEL,
-                 font=mf).pack(side="left")
-        self._fsize = tk.IntVar(value=12)
-        tk.Spinbox(tb, from_=8, to=36, textvariable=self._fsize,
-                   width=3, bg=BG, fg=WHITE, buttonbackground=BG,
-                   font=mf, command=self._change_font,
-                   relief="flat").pack(side="left", padx=4)
+        tbtn("New",     self._new)
+        tbtn("Open",    self._open)
+        tbtn("Save",    self._save,    fg=ACCENT, bold=True)
+        tbtn("Save As", self._save_as, fg=ACCENT)
 
-        # word wrap toggle
+        tk.Label(tb, text="|", bg=SURFACE, fg=BORDER, font=FB).pack(side="left", padx=6)
+
+        tk.Label(tb, text="Size", bg=SURFACE, fg=MUTED, font=FS).pack(side="left")
+        self._fsize = tk.IntVar(value=11)
+        tk.Spinbox(tb, from_=8, to=32, textvariable=self._fsize, width=3,
+                   relief="flat", bg=BG, fg=TEXT, font=FM,
+                   command=self._resize).pack(side="left", padx=6)
+
         self._wrap_v = tk.BooleanVar(value=True)
         tk.Checkbutton(tb, text="Wrap", variable=self._wrap_v,
-                       command=self._toggle_wrap,
-                       bg=PANEL, fg=MUTED, selectcolor=BG,
-                       activebackground=PANEL, font=mf).pack(side="left", padx=4)
+                       command=self._toggle_wrap, bg=SURFACE, fg=MUTED,
+                       activebackground=SURFACE, selectcolor=SURFACE,
+                       font=FS).pack(side="left")
 
-        # status
-        self._status_v = tk.StringVar(value="ready")
-        tk.Label(tb, textvariable=self._status_v, fg=MUTED, bg=PANEL,
-                 font=mf).pack(side="right", padx=10)
+        self._sv = tk.StringVar(value="Ready")
+        tk.Label(tb, textvariable=self._sv, bg=SURFACE, fg=MUTED,
+                 font=FS).pack(side="right", padx=10)
 
-        tk.Frame(self, bg=BORDER, height=1).pack(fill="x")
+        _sep(self)
 
-        # ── text area ────────────────────────────────────────────────────────
-        frame = tk.Frame(self, bg=BG)
+        # text area
+        frame = tk.Frame(self, bg=SURFACE)
         frame.pack(fill="both", expand=True)
 
-        self._tfont = tkfont.Font(family="Consolas", size=12)
+        self._tfont = tkfont.Font(family="Consolas", size=11)
         self._txt = tk.Text(
-            frame,
-            bg=PANEL, fg=WHITE,
-            insertbackground=CYAN,
-            selectbackground=BORDER, selectforeground=CYAN,
+            frame, bg=SURFACE, fg=TEXT,
+            insertbackground=ACCENT,
+            selectbackground="#BFDBFE", selectforeground=TEXT,
             font=self._tfont, wrap="word", undo=True,
-            padx=14, pady=12, relief="flat", bd=0,
-        )
+            padx=18, pady=14, relief="flat", bd=0,
+            spacing1=2, spacing3=2)
+
         vsb = tk.Scrollbar(frame, command=self._txt.yview,
-                           bg=PANEL, troughcolor=BG,
-                           activebackground=CYAN, relief="flat")
+                           relief="flat", bg=BG, troughcolor=BG)
         self._txt.configure(yscrollcommand=vsb.set)
         vsb.pack(side="right", fill="y")
         self._txt.pack(fill="both", expand=True)
-        self._txt.bind("<KeyRelease>", self._update_status)
+        self._txt.bind("<KeyRelease>", self._update_sv)
 
-        # keyboard shortcuts
-        self.bind("<Control-s>",       lambda e: self._save())
-        self.bind("<Control-n>",       lambda e: self._new())
-        self.bind("<Control-o>",       lambda e: self._open_file())
-        self.bind("<Control-S>",       lambda e: self._save_as())
+        self.bind("<Control-s>", lambda e: self._save())
+        self.bind("<Control-S>", lambda e: self._save_as())
+        self.bind("<Control-n>", lambda e: self._new())
+        self.bind("<Control-o>", lambda e: self._open())
 
-    # ── actions ──────────────────────────────────────────────────────────────
     def insert_text(self, text):
         self._txt.insert("end", text)
-        self._update_status()
-        self.lift()
+        self._update_sv()
+        self.lift(); self.focus_force()
 
     def _new(self):
-        self._txt.delete("1.0", "end")
-        self._filepath = None
-        self.title("Notepad — untitled")
-        self._status_v.set("new file")
+        self._txt.delete("1.0","end")
+        self._path = None
+        self.title("Notepad  —  untitled")
+        self._sv.set("New file")
 
-    def _open_file(self):
+    def _open(self):
         p = filedialog.askopenfilename(
-            filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
-        if not p:
-            return
+            filetypes=[("Text","*.txt"),("All","*.*")])
+        if not p: return
         with open(p, encoding="utf-8") as f:
-            self._txt.delete("1.0", "end")
+            self._txt.delete("1.0","end")
             self._txt.insert("1.0", f.read())
-        self._filepath = p
-        self.title(f"Notepad — {os.path.basename(p)}")
-        self._update_status()
+        self._path = p
+        self.title(f"Notepad  —  {os.path.basename(p)}")
+        self._update_sv()
 
     def _save(self):
-        if not self._filepath:
-            self._save_as()
-            return
-        content = self._txt.get("1.0", "end").rstrip()
-        with open(self._filepath, "w", encoding="utf-8") as f:
-            f.write(content)
-        self._status_v.set(f"saved  ✓  {os.path.basename(self._filepath)}")
+        if not self._path: self._save_as(); return
+        with open(self._path,"w",encoding="utf-8") as f:
+            f.write(self._txt.get("1.0","end").rstrip())
+        self._sv.set(f"Saved  —  {os.path.basename(self._path)}")
 
     def _save_as(self):
-        ts  = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        p   = filedialog.asksaveasfilename(
+        ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        p  = filedialog.asksaveasfilename(
             defaultextension=".txt",
             initialfile=f"typed_text_{ts}.txt",
-            filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
-        if not p:
-            return
-        self._filepath = p
-        self._save()
-        self.title(f"Notepad — {os.path.basename(p)}")
+            filetypes=[("Text","*.txt"),("All","*.*")])
+        if not p: return
+        self._path = p; self._save()
+        self.title(f"Notepad  —  {os.path.basename(p)}")
 
     def _toggle_wrap(self):
         self._txt.configure(wrap="word" if self._wrap_v.get() else "none")
 
-    def _change_font(self):
+    def _resize(self):
         self._tfont.configure(size=self._fsize.get())
 
-    def _update_status(self, _=None):
-        content = self._txt.get("1.0", "end").strip()
-        words   = len(content.split()) if content else 0
-        self._status_v.set(f"{len(content)} chars  ·  {words} words")
+    def _update_sv(self, _=None):
+        c = self._txt.get("1.0","end").strip()
+        self._sv.set(f"{len(c)} chars  ·  {len(c.split()) if c else 0} words")
 
     def _center(self):
         self.update_idletasks()
-        w = self.winfo_width();  h = self.winfo_height()
-        sw = self.winfo_screenwidth();  sh = self.winfo_screenheight()
-        self.geometry(f"+{(sw - w)//2}+{(sh - h)//2}")
+        w = self.winfo_width(); h = self.winfo_height()
+        sw = self.winfo_screenwidth(); sh = self.winfo_screenheight()
+        self.geometry(f"+{(sw-w)//2}+{(sh-h)//2}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  SNAKE GAME
 # ─────────────────────────────────────────────────────────────────────────────
 class GameWindow(tk.Toplevel):
-    CELL = 22;  COLS = 24;  ROWS = 18
+    CELL=22; COLS=24; ROWS=18
 
     def __init__(self, master):
         super().__init__(master)
         self.title("Snake")
         self.configure(bg=BG)
         self.resizable(False, False)
-        self._hi    = 0
-        self._build()
-        self._center()
-        self._reset()
+        self._hi=0; self._aid=None
+        self._build(); self._center(); self._reset()
 
     def _build(self):
-        W = self.COLS * self.CELL
-        H = self.ROWS * self.CELL
+        W=self.COLS*self.CELL; H=self.ROWS*self.CELL
 
-        # top bar
-        top = tk.Frame(self, bg=PANEL, pady=6)
+        top = tk.Frame(self, bg=SURFACE, pady=10, padx=18)
         top.pack(fill="x")
-        self._score_v = tk.StringVar(value="SCORE: 0")
-        self._hi_v    = tk.StringVar(value="BEST: 0")
-        tk.Label(top, textvariable=self._score_v, fg=AMBER, bg=PANEL,
-                 font=tkfont.Font(family="Consolas", size=12, weight="bold")
-                 ).pack(side="left", padx=14)
-        tk.Label(top, textvariable=self._hi_v, fg=MUTED, bg=PANEL,
-                 font=tkfont.Font(family="Consolas", size=12)
-                 ).pack(side="right", padx=14)
+        self._sv  = tk.StringVar(value="Score  0")
+        self._hiv = tk.StringVar(value="Best  0")
+        tk.Label(top, textvariable=self._sv,  bg=SURFACE, fg=TEXT,
+                 font=("Segoe UI",12,"bold")).pack(side="left")
+        tk.Label(top, textvariable=self._hiv, bg=SURFACE, fg=MUTED,
+                 font=("Segoe UI",12)).pack(side="right")
 
-        # canvas
-        self._cv = tk.Canvas(self, width=W, height=H, bg=DARK,
-                             highlightthickness=1,
-                             highlightbackground=BORDER)
-        self._cv.pack(padx=12, pady=6)
+        _sep(self)
 
-        # hint
-        tk.Label(self,
-                 text="Arrow keys / WASD to move  ·  Click canvas to start / restart",
-                 fg=MUTED, bg=BG,
-                 font=tkfont.Font(family="Consolas", size=8)
-                 ).pack(pady=(0, 8))
+        self._cv = tk.Canvas(self, width=W, height=H, bg=SURFACE,
+                             highlightthickness=1, highlightbackground=BORDER)
+        self._cv.pack(padx=12, pady=10)
 
-        # bindings
-        for key, d in [("<Up>",(0,-1)),("<Down>",(0,1)),
-                        ("<Left>",(-1,0)),("<Right>",(1,0)),
-                        ("<w>",(0,-1)),("<s>",(0,1)),
-                        ("<a>",(-1,0)),("<d>",(1,0))]:
-            self.bind(key, lambda e, dv=d: self._steer(*dv))
+        _sep(self)
+        tk.Label(self, text="Arrow keys / WASD  ·  Click canvas to start or restart",
+                 bg=BG, fg=MUTED, font=FS).pack(pady=7)
+
+        for key,d in [("<Up>",(0,-1)),("<Down>",(0,1)),
+                       ("<Left>",(-1,0)),("<Right>",(1,0)),
+                       ("<w>",(0,-1)),("<s>",(0,1)),
+                       ("<a>",(-1,0)),("<d>",(1,0))]:
+            self.bind(key, lambda e,dv=d: self._steer(*dv))
         self._cv.bind("<Button-1>", lambda e: self._start())
         self.focus_set()
 
     def _reset(self):
-        cx, cy = self.COLS // 2, self.ROWS // 2
-        self._snake   = [(cx, cy), (cx-1, cy), (cx-2, cy)]
-        self._dx      = 1;  self._dy = 0
-        self._score   = 0
-        self._alive   = False
-        self._aid     = None
-        self._food    = self._spawn_food()
-        self._score_v.set("SCORE: 0")
-        self._draw_screen("SNAKE", "Click to start")
+        cx,cy=self.COLS//2,self.ROWS//2
+        self._snake=[(cx,cy),(cx-1,cy),(cx-2,cy)]
+        self._dx=1; self._dy=0
+        self._score=0; self._alive=False
+        self._food=self._spawn()
+        self._sv.set("Score  0")
+        self._screen("Snake","Click to start")
 
     def _start(self):
-        if self._aid:
-            self.after_cancel(self._aid)
-        self._reset()
-        self._alive = True
-        self._loop()
+        if self._aid: self.after_cancel(self._aid)
+        self._reset(); self._alive=True; self._loop()
 
-    def _steer(self, dx, dy):
-        if (dx, dy) != (-self._dx, -self._dy):
-            self._dx, self._dy = dx, dy
+    def _steer(self,dx,dy):
+        if (dx,dy)!=(-self._dx,-self._dy):
+            self._dx,self._dy=dx,dy
 
-    def _spawn_food(self):
-        occupied = set(self._snake)
+    def _spawn(self):
+        occ=set(self._snake)
         while True:
-            p = (random.randint(0, self.COLS-1),
-                 random.randint(0, self.ROWS-1))
-            if p not in occupied:
-                return p
+            p=(random.randint(0,self.COLS-1),random.randint(0,self.ROWS-1))
+            if p not in occ: return p
 
     def _loop(self):
-        if not self._alive:
+        if not self._alive: return
+        hx,hy=self._snake[0]
+        nx,ny=hx+self._dx,hy+self._dy
+        if not(0<=nx<self.COLS and 0<=ny<self.ROWS) or (nx,ny) in self._snake:
+            self._alive=False
+            if self._score>self._hi:
+                self._hi=self._score
+                self._hiv.set(f"Best  {self._hi}")
+            self._screen("Game Over",f"Score: {self._score}  ·  Click to restart")
             return
-        hx, hy = self._snake[0]
-        nx, ny  = hx + self._dx, hy + self._dy
-
-        # collision
-        if not (0 <= nx < self.COLS and 0 <= ny < self.ROWS) \
-                or (nx, ny) in self._snake:
-            self._alive = False
-            if self._score > self._hi:
-                self._hi = self._score
-                self._hi_v.set(f"BEST: {self._hi}")
-            self._draw_screen("GAME OVER",
-                              f"Score: {self._score}  ·  Click to restart",
-                              color=AMBER)
-            return
-
-        self._snake.insert(0, (nx, ny))
-        if (nx, ny) == self._food:
-            self._score += 10
-            self._score_v.set(f"SCORE: {self._score}")
-            self._food = self._spawn_food()
+        self._snake.insert(0,(nx,ny))
+        if (nx,ny)==self._food:
+            self._score+=10; self._sv.set(f"Score  {self._score}")
+            self._food=self._spawn()
         else:
             self._snake.pop()
-
         self._draw()
-        delay = max(60, 130 - self._score // 5)
-        self._aid = self.after(delay, self._loop)
+        self._aid=self.after(max(60,130-self._score//5),self._loop)
 
-    # ── drawing ──────────────────────────────────────────────────────────────
     def _draw(self):
-        C = self.CELL
+        C=self.CELL
         self._cv.delete("all")
-        W = self.COLS * C;  H = self.ROWS * C
+        W=self.COLS*C; H=self.ROWS*C
+        for x in range(0,W+1,C):
+            self._cv.create_line(x,0,x,H,fill=SEP)
+        for y in range(0,H+1,C):
+            self._cv.create_line(0,y,W,y,fill=SEP)
+        fx,fy=self._food; p=5
+        self._cv.create_oval(fx*C+p,fy*C+p,fx*C+C-p,fy*C+C-p,
+                             fill=DANGER,outline="")
+        for i,(x,y) in enumerate(self._snake):
+            fill=ACCENT if i==0 else "#3B82F6" if i<5 else "#93C5FD"
+            self._cv.create_rectangle(x*C+2,y*C+2,x*C+C-2,y*C+C-2,
+                                      fill=fill,outline=SURFACE,width=1)
 
-        # grid lines
-        for x in range(0, W, C):
-            self._cv.create_line(x, 0, x, H, fill="#0d1520", width=1)
-        for y in range(0, H, C):
-            self._cv.create_line(0, y, W, y, fill="#0d1520", width=1)
-
-        # food
-        fx, fy = self._food
-        pad = 4
-        self._cv.create_oval(
-            fx*C+pad, fy*C+pad,
-            fx*C+C-pad, fy*C+C-pad,
-            fill=PINK, outline="")
-
-        # snake
-        for i, (x, y) in enumerate(self._snake):
-            if   i == 0: fill = CYAN
-            elif i < 5:  fill = GREEN
-            else:        fill = "#1a6b35"
-            self._cv.create_rectangle(
-                x*C+2, y*C+2, x*C+C-2, y*C+C-2,
-                fill=fill, outline=DARK, width=1)
-
-    def _draw_screen(self, title, sub, color=GREEN):
-        W = self.COLS * self.CELL;  H = self.ROWS * self.CELL
+    def _screen(self,title,sub):
+        W=self.COLS*self.CELL; H=self.ROWS*self.CELL
         self._cv.delete("all")
-        self._cv.create_rectangle(
-            W//2-160, H//2-50, W//2+160, H//2+56,
-            fill=PANEL, outline=color, width=2)
-        self._cv.create_text(W//2, H//2-18,
-                             text=title, fill=color,
-                             font=("Consolas", 22, "bold"))
-        self._cv.create_text(W//2, H//2+18,
-                             text=sub, fill=MUTED,
-                             font=("Consolas", 10))
+        self._cv.create_rectangle(W//2-150,H//2-52,W//2+150,H//2+56,
+                                  fill=SURFACE,outline=BORDER,width=1)
+        self._cv.create_text(W//2,H//2-18,text=title,fill=TEXT,
+                             font=("Segoe UI",18,"bold"))
+        self._cv.create_text(W//2,H//2+16,text=sub,fill=MUTED,
+                             font=("Segoe UI",10))
 
     def _center(self):
         self.update_idletasks()
-        w = self.winfo_width();  h = self.winfo_height()
-        sw = self.winfo_screenwidth();  sh = self.winfo_screenheight()
-        self.geometry(f"+{(sw - w)//2 + 240}+{(sh - h)//2}")
+        w=self.winfo_width(); h=self.winfo_height()
+        sw=self.winfo_screenwidth(); sh=self.winfo_screenheight()
+        self.geometry(f"+{(sw-w)//2+260}+{(sh-h)//2}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  WORD SHORTCUTS  (searchable cheatsheet)
+#  WORD SHORTCUTS
 # ─────────────────────────────────────────────────────────────────────────────
 SHORTCUTS = {
-    "FILE": [
-        ("Ctrl + N",         "New document"),
-        ("Ctrl + O",         "Open document"),
-        ("Ctrl + S",         "Save"),
-        ("Ctrl + Shift + S", "Save As"),
-        ("Ctrl + W",         "Close document"),
-        ("Ctrl + P",         "Print"),
-        ("Ctrl + Z",         "Undo"),
-        ("Ctrl + Y",         "Redo"),
-        ("F12",              "Save As dialog"),
-        ("Alt + F4",         "Close Word"),
+    "File": [
+        ("Ctrl + N","New document"),("Ctrl + O","Open document"),
+        ("Ctrl + S","Save"),("Ctrl + Shift + S","Save As"),
+        ("Ctrl + W","Close document"),("Ctrl + P","Print"),
+        ("Ctrl + Z","Undo"),("Ctrl + Y","Redo"),
+        ("F12","Save As dialog"),("Alt + F4","Close Word"),
     ],
-    "EDITING": [
-        ("Ctrl + C",         "Copy"),
-        ("Ctrl + X",         "Cut"),
-        ("Ctrl + V",         "Paste"),
-        ("Ctrl + A",         "Select All"),
-        ("Ctrl + F",         "Find"),
-        ("Ctrl + H",         "Find & Replace"),
-        ("Ctrl + G",         "Go To page"),
-        ("Delete",           "Delete next character"),
-        ("Backspace",        "Delete previous character"),
-        ("Ctrl + Delete",    "Delete next word"),
-        ("Ctrl + Backspace", "Delete previous word"),
+    "Editing": [
+        ("Ctrl + C","Copy"),("Ctrl + X","Cut"),("Ctrl + V","Paste"),
+        ("Ctrl + A","Select All"),("Ctrl + F","Find"),
+        ("Ctrl + H","Find & Replace"),("Ctrl + G","Go To page"),
+        ("Delete","Delete next character"),("Backspace","Delete previous character"),
+        ("Ctrl + Delete","Delete next word"),("Ctrl + Backspace","Delete previous word"),
     ],
-    "FORMATTING": [
-        ("Ctrl + B",          "Bold"),
-        ("Ctrl + I",          "Italic"),
-        ("Ctrl + U",          "Underline"),
-        ("Ctrl + E",          "Centre align"),
-        ("Ctrl + L",          "Left align"),
-        ("Ctrl + R",          "Right align"),
-        ("Ctrl + J",          "Justify"),
-        ("Ctrl + ]",          "Increase font size"),
-        ("Ctrl + [",          "Decrease font size"),
-        ("Ctrl + D",          "Font dialog"),
-        ("Ctrl + Shift + >",  "Larger font"),
-        ("Ctrl + Shift + <",  "Smaller font"),
+    "Formatting": [
+        ("Ctrl + B","Bold"),("Ctrl + I","Italic"),("Ctrl + U","Underline"),
+        ("Ctrl + E","Centre align"),("Ctrl + L","Left align"),
+        ("Ctrl + R","Right align"),("Ctrl + J","Justify"),
+        ("Ctrl + ]","Increase font size"),("Ctrl + [","Decrease font size"),
+        ("Ctrl + D","Font dialog"),("Ctrl + Shift + >","Larger font"),
+        ("Ctrl + Shift + <","Smaller font"),
     ],
-    "NAVIGATION": [
-        ("Ctrl + Home",       "Go to beginning"),
-        ("Ctrl + End",        "Go to end"),
-        ("Ctrl + →",          "Next word"),
-        ("Ctrl + ←",          "Previous word"),
-        ("Ctrl + ↑",          "Previous paragraph"),
-        ("Ctrl + ↓",          "Next paragraph"),
-        ("Page Up",           "Scroll up one page"),
-        ("Page Down",         "Scroll down one page"),
+    "Navigation": [
+        ("Ctrl + Home","Go to beginning"),("Ctrl + End","Go to end"),
+        ("Ctrl + →","Next word"),("Ctrl + ←","Previous word"),
+        ("Ctrl + ↑","Previous paragraph"),("Ctrl + ↓","Next paragraph"),
+        ("Page Up","Scroll up one page"),("Page Down","Scroll down one page"),
     ],
-    "SELECTION": [
-        ("Shift + → / ←",      "Select character by character"),
-        ("Ctrl + Shift + →",   "Select next word"),
-        ("Shift + Home",       "Select to line start"),
-        ("Shift + End",        "Select to line end"),
-        ("Ctrl + Shift + End", "Select to document end"),
+    "Selection": [
+        ("Shift + →/←","Select character by character"),
+        ("Ctrl + Shift + →","Select next word"),
+        ("Shift + Home","Select to line start"),
+        ("Shift + End","Select to line end"),
+        ("Ctrl + Shift + End","Select to document end"),
         ("Ctrl + Shift + Home","Select to document start"),
     ],
-    "REVIEW & MISC": [
-        ("Ctrl + K",          "Insert hyperlink"),
-        ("Alt + Shift + D",   "Insert current date"),
-        ("Alt + Shift + T",   "Insert current time"),
-        ("F7",                "Spell check"),
-        ("Ctrl + Shift + E",  "Track changes"),
-        ("Ctrl + Alt + M",    "Insert comment"),
-        ("Ctrl + 1",          "Single line spacing"),
-        ("Ctrl + 2",          "Double line spacing"),
-        ("Ctrl + 5",          "1.5 line spacing"),
+    "Review & Misc": [
+        ("Ctrl + K","Insert hyperlink"),("Alt + Shift + D","Insert current date"),
+        ("Alt + Shift + T","Insert current time"),("F7","Spell check"),
+        ("Ctrl + Shift + E","Track changes"),("Ctrl + Alt + M","Insert comment"),
+        ("Ctrl + 1","Single line spacing"),("Ctrl + 2","Double line spacing"),
+        ("Ctrl + 5","1.5 line spacing"),
     ],
 }
 
-SEC_COLORS = {
-    "FILE":          CYAN,
-    "EDITING":       GREEN,
-    "FORMATTING":    AMBER,
-    "NAVIGATION":    PINK,
-    "SELECTION":     "#a371f7",
-    "REVIEW & MISC": "#f0883e",
+SEC_COLOR = {
+    "File":ACCENT,"Editing":GREEN,"Formatting":AMBER,
+    "Navigation":PURPLE,"Selection":"#0891B2","Review & Misc":"#BE185D",
 }
 
 
 class ShortcutsWindow(tk.Toplevel):
     def __init__(self, master):
         super().__init__(master)
-        self.title("Microsoft Word Shortcuts")
+        self.title("Word Shortcuts")
         self.configure(bg=BG)
-        self.geometry("620x580")
-        self._all_rows = []   # (section, key, desc, row_frame)
-        self._build()
-        self._center()
+        self.geometry("580x540")
+        self.minsize(400,360)
+        self._rows=[]
+        self._build(); self._center()
 
     def _build(self):
-        mf = tkfont.Font(family="Consolas", size=9)
-        bf = tkfont.Font(family="Consolas", size=9, weight="bold")
-
-        # ── search bar ───────────────────────────────────────────────────────
-        search_row = tk.Frame(self, bg=PANEL, pady=8, padx=12)
-        search_row.pack(fill="x")
-
-        tk.Label(search_row, text="🔍  Filter:", fg=MUTED, bg=PANEL,
-                 font=mf).pack(side="left")
-
+        # search bar
+        top = tk.Frame(self, bg=SURFACE, pady=10, padx=16)
+        top.pack(fill="x")
+        tk.Label(top, text="Search", bg=SURFACE, fg=MUTED, font=FB).pack(side="left")
         self._q = tk.StringVar()
         self._q.trace_add("write", lambda *_: self._filter())
-        entry = tk.Entry(search_row, textvariable=self._q,
-                         bg=BG, fg=WHITE, insertbackground=CYAN,
-                         relief="flat", font=mf, width=30)
-        entry.pack(side="left", padx=8, ipady=4)
+        e = tk.Entry(top, textvariable=self._q, bg=BG, fg=TEXT,
+                     insertbackground=ACCENT, relief="flat", font=FB, width=24)
+        e.pack(side="left", padx=10, ipady=4)
+        e.focus_set()
+        tk.Button(top, text="Clear", command=lambda: self._q.set(""),
+                  bg=SURFACE, fg=MUTED, activebackground=BG,
+                  relief="flat", font=FS, cursor="hand2").pack(side="left")
+        total = sum(len(v) for v in SHORTCUTS.values())
+        tk.Label(top, text=f"{total} shortcuts", bg=SURFACE, fg=MUTED,
+                 font=FS).pack(side="right")
 
-        tk.Button(search_row, text="✕ Clear",
-                  command=lambda: self._q.set(""),
-                  bg=BG, fg=MUTED, activebackground=BG,
-                  activeforeground=WHITE, relief="flat",
-                  font=mf, cursor="hand2").pack(side="left")
+        _sep(self)
 
-        tk.Label(search_row, text=f"{sum(len(v) for v in SHORTCUTS.values())} shortcuts",
-                 fg=MUTED, bg=PANEL, font=mf).pack(side="right")
-
-        tk.Frame(self, bg=BORDER, height=1).pack(fill="x")
-
-        # ── scrollable content ───────────────────────────────────────────────
-        wrapper = tk.Frame(self, bg=BG)
-        wrapper.pack(fill="both", expand=True)
-
-        self._canvas = tk.Canvas(wrapper, bg=BG, highlightthickness=0)
-        vsb = tk.Scrollbar(wrapper, orient="vertical",
-                           command=self._canvas.yview,
-                           bg=PANEL, troughcolor=BG,
-                           activebackground=CYAN, relief="flat")
-        self._canvas.configure(yscrollcommand=vsb.set)
+        # scroll area
+        outer = tk.Frame(self, bg=BG)
+        outer.pack(fill="both", expand=True)
+        cv = tk.Canvas(outer, bg=BG, highlightthickness=0)
+        vsb = tk.Scrollbar(outer, orient="vertical", command=cv.yview,
+                           relief="flat", bg=BG, troughcolor=BG)
+        cv.configure(yscrollcommand=vsb.set)
         vsb.pack(side="right", fill="y")
-        self._canvas.pack(side="left", fill="both", expand=True)
+        cv.pack(side="left", fill="both", expand=True)
+        self._inner = tk.Frame(cv, bg=BG)
+        win = cv.create_window((0,0), window=self._inner, anchor="nw")
+        self._inner.bind("<Configure>",
+            lambda e: cv.configure(scrollregion=cv.bbox("all")))
+        cv.bind("<Configure>",
+            lambda e: cv.itemconfig(win, width=e.width))
+        cv.bind_all("<MouseWheel>",
+            lambda e: cv.yview_scroll(-1*(e.delta//120),"units"))
 
-        self._inner = tk.Frame(self._canvas, bg=BG)
-        self._cwin  = self._canvas.create_window(
-            (0, 0), window=self._inner, anchor="nw")
-
-        self._inner.bind("<Configure>", lambda e: self._canvas.configure(
-            scrollregion=self._canvas.bbox("all")))
-        self._canvas.bind("<Configure>", lambda e: self._canvas.itemconfig(
-            self._cwin, width=e.width))
-
-        # mousewheel scroll
-        self._canvas.bind_all(
-            "<MouseWheel>",
-            lambda e: self._canvas.yview_scroll(-1*(e.delta//120), "units"))
-
-        # ── populate rows ────────────────────────────────────────────────────
         for section, items in SHORTCUTS.items():
-            color = SEC_COLORS.get(section, WHITE)
-
-            # section header
+            color = SEC_COLOR.get(section, ACCENT)
             hdr = tk.Frame(self._inner, bg=BG)
-            hdr.pack(fill="x", padx=14, pady=(10, 3))
-            tk.Frame(hdr, bg=color, width=3, height=18).pack(side="left")
-            tk.Label(hdr, text=f"  {section}", fg=color, bg=BG,
-                     font=bf).pack(side="left")
+            hdr.pack(fill="x", padx=16, pady=(12,2))
+            tk.Frame(hdr, bg=color, width=3, height=15).pack(side="left")
+            tk.Label(hdr, text=f"  {section}", bg=BG, fg=color,
+                     font=("Segoe UI",9,"bold")).pack(side="left")
 
             for key_str, desc in items:
-                row = tk.Frame(self._inner, bg=PANEL, pady=5)
-                row.pack(fill="x", padx=14, pady=1)
+                row = tk.Frame(self._inner, bg=SURFACE)
+                row.pack(fill="x", padx=16, pady=1)
+                tk.Label(row, text=key_str, bg=SURFACE, fg=color,
+                         font=FM, width=20, anchor="w",
+                         padx=10, pady=6).pack(side="left")
+                tk.Frame(row, bg=SEP, width=1).pack(side="left",
+                                                     fill="y", pady=4)
+                tk.Label(row, text=desc, bg=SURFACE, fg=TEXT,
+                         font=FB, anchor="w", padx=12).pack(
+                             side="left", fill="x", expand=True)
+                self._rows.append((section, key_str, desc, row))
 
-                # key badge
-                k_lbl = tk.Label(row, text=key_str,
-                                 fg=color, bg=BG,
-                                 font=tkfont.Font(family="Consolas", size=9),
-                                 width=22, anchor="w", padx=8)
-                k_lbl.pack(side="left")
-
-                # description
-                d_lbl = tk.Label(row, text=desc,
-                                 fg=WHITE, bg=PANEL,
-                                 font=mf, anchor="w", padx=6)
-                d_lbl.pack(side="left", fill="x", expand=True)
-
-                self._all_rows.append((section, key_str, desc, row))
-
-        # bottom padding
-        tk.Label(self._inner, text="", bg=BG, height=1).pack()
+        tk.Label(self._inner, bg=BG, height=1).pack()
 
     def _filter(self):
         q = self._q.get().lower().strip()
-        for section, key_str, desc, row in self._all_rows:
-            match = (not q or
-                     q in key_str.lower() or
-                     q in desc.lower() or
-                     q in section.lower())
-            if match:
-                row.pack(fill="x", padx=14, pady=1)
-            else:
-                row.pack_forget()
+        for section, key_str, desc, row in self._rows:
+            show = (not q or q in key_str.lower()
+                    or q in desc.lower() or q in section.lower())
+            if show: row.pack(fill="x", padx=16, pady=1)
+            else:    row.pack_forget()
 
     def _center(self):
         self.update_idletasks()
-        w = self.winfo_width();  h = self.winfo_height()
-        sw = self.winfo_screenwidth();  sh = self.winfo_screenheight()
-        self.geometry(f"+{(sw - w)//2}+{(sh - h)//2}")
+        w=self.winfo_width(); h=self.winfo_height()
+        sw=self.winfo_screenwidth(); sh=self.winfo_screenheight()
+        self.geometry(f"+{(sw-w)//2}+{(sh-h)//2}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
