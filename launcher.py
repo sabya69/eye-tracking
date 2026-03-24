@@ -32,6 +32,9 @@ FS  = ("Segoe UI", 10)           # small / muted
 FT  = ("Segoe UI", 28, "bold")   # app title
 FM  = ("Consolas", 12)           # mono
 
+# ── auto-start cooldown (milliseconds) ───────────────────────────────────────
+AUTO_START_DELAY_MS = 0   # 1.5 seconds — change as needed
+
 
 def _sep(parent):
     tk.Frame(parent, bg=SEP, height=1).pack(fill="x")
@@ -55,6 +58,20 @@ class Launcher(tk.Tk):
         self._proc = None
         self._build()
         self._tick()
+
+        # ── Auto-start eye tracker after cooldown ─────────────────────────────
+        self._countdown_val = AUTO_START_DELAY_MS // 1000
+        self._schedule_autostart()
+
+    def _schedule_autostart(self):
+        """Show a countdown in the status bar, then auto-launch the tracker."""
+        if self._countdown_val > 0:
+            self._sv.set(f"  Eye Tracker starting in {self._countdown_val}s …")
+            self._countdown_val -= 1
+            self.after(1000, self._schedule_autostart)
+        else:
+            self._sv.set("  Auto-starting Eye Tracker …")
+            self.after(200, self._start_tracker)   # tiny pause so msg is visible
 
     def _build(self):
         # ── header ────────────────────────────────────────────────────────────
@@ -112,7 +129,7 @@ class Launcher(tk.Tk):
         self._dot = tk.Label(sb, text="●", fg=BORDER, bg=SURFACE, font=FB)
         self._dot.pack(side="left")
 
-        self._sv = tk.StringVar(value="  Tracker not running")
+        self._sv = tk.StringVar(value="  Initialising …")
         tk.Label(sb, textvariable=self._sv, bg=SURFACE, fg=MUTED,
                  font=FB).pack(side="left")
 
