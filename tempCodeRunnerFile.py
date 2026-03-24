@@ -1,6 +1,6 @@
 """
-GazeOS  —  Launcher  (Fullscreen Edition)
-==========================================
+GazeOS  —  Launcher
+====================
 python launcher.py
 
 Requires in the same folder:
@@ -25,12 +25,12 @@ AMBER   = "#D97706"
 PURPLE  = "#7C3AED"
 DANGER  = "#DC2626"
 
-# ── font stack (larger for fullscreen) ───────────────────────────────────────
-FH  = ("Segoe UI", 15, "bold")   # card heading
-FB  = ("Segoe UI", 12)           # body
-FS  = ("Segoe UI", 10)           # small / muted
-FT  = ("Segoe UI", 28, "bold")   # app title
-FM  = ("Consolas", 12)           # mono
+# ── font stack ────────────────────────────────────────────────────────────────
+FH  = ("Segoe UI", 10, "bold")   # card heading
+FB  = ("Segoe UI",  9)           # body
+FS  = ("Segoe UI",  8)           # small / muted
+FT  = ("Segoe UI", 17, "bold")   # app title
+FM  = ("Consolas",  9)           # mono
 
 
 def _sep(parent):
@@ -45,27 +45,22 @@ class Launcher(tk.Tk):
         super().__init__()
         self.title("GazeOS")
         self.configure(bg=BG)
-
-        # ── Fullscreen ────────────────────────────────────────────────────────
-        self.state("zoomed")          # Windows: maximized (keeps title bar)
-        # Uncomment the next line for true borderless fullscreen instead:
-        # self.attributes("-fullscreen", True)
-
-        self.resizable(True, True)
+        self.resizable(False, False)
         self._proc = None
         self._build()
+        self._center()
         self._tick()
 
     def _build(self):
-        # ── header ────────────────────────────────────────────────────────────
-        hdr = tk.Frame(self, bg=SURFACE, padx=48, pady=30)
+        # header
+        hdr = tk.Frame(self, bg=SURFACE, padx=28, pady=20)
         hdr.pack(fill="x")
 
         lf = tk.Frame(hdr, bg=SURFACE)
         lf.pack(side="left")
         tk.Label(lf, text="GazeOS", bg=SURFACE, fg=TEXT,
                  font=FT).pack(anchor="w")
-        tk.Label(lf, text="Eye-Tracker  ·  Assistive Technology Platform",
+        tk.Label(lf, text="Eye-Tracker",
                  bg=SURFACE, fg=MUTED, font=FS).pack(anchor="w")
 
         rf = tk.Frame(hdr, bg=SURFACE)
@@ -73,57 +68,46 @@ class Launcher(tk.Tk):
         self._clock_v = tk.StringVar()
         tk.Label(rf, textvariable=self._clock_v,
                  bg=SURFACE, fg=MUTED, font=FM).pack(anchor="e")
-        tk.Label(rf, text="Group 10  ·  Mini Project",
+        tk.Label(rf, text="Group 10 Mini Project",
                  bg=SURFACE, fg=MUTED, font=FS).pack(anchor="e")
 
         _sep(self)
 
-        # ── card grid ─────────────────────────────────────────────────────────
-        # Use a centred container that expands with the window
-        wrapper = tk.Frame(self, bg=BG)
-        wrapper.pack(fill="both", expand=True)
-
-        body = tk.Frame(wrapper, bg=BG)
-        body.place(relx=0.5, rely=0.5, anchor="center")
+        # 2×2 module cards
+        body = tk.Frame(self, bg=BG, padx=24, pady=20)
+        body.pack()
 
         modules = [
-            ("👁  Eye Tracker",    "Calibrate & start gaze tracking",       ACCENT,  self._start_tracker),
-            ("📝  Notepad",        "Text editor  ·  save / open files",      GREEN,   lambda: NotepadWindow(self)),
-            ("🐍  Snake Game",     "Arrow keys or WASD to play",             AMBER,   lambda: GameWindow(self)),
-            ("⌨  Word Shortcuts", "Searchable MS Word keyboard shortcuts",  PURPLE,  lambda: ShortcutsWindow(self)),
+            ("Eye Tracker",    "Calibrate & start gaze tracking",       ACCENT,  self._start_tracker),
+            ("Notepad",        "Text editor  ·  save / open files",      GREEN,   lambda: NotepadWindow(self)),
+            ("Snake Game",     "Arrow keys or WASD to play",             AMBER,   lambda: GameWindow(self)),
+            ("Word Shortcuts", "Searchable MS Word keyboard shortcuts",  PURPLE,  lambda: ShortcutsWindow(self)),
         ]
 
         for i, (name, desc, color, cmd) in enumerate(modules):
             r, c = divmod(i, 2)
             _Card(body, name, desc, color, cmd).grid(
-                row=r, column=c, padx=20, pady=20, sticky="nsew")
-
-        body.grid_columnconfigure(0, weight=1)
-        body.grid_columnconfigure(1, weight=1)
-        body.grid_rowconfigure(0, weight=1)
-        body.grid_rowconfigure(1, weight=1)
+                row=r, column=c, padx=8, pady=8)
 
         _sep(self)
 
-        # ── status bar ────────────────────────────────────────────────────────
-        sb = tk.Frame(self, bg=SURFACE, padx=48, pady=14)
+        # status bar
+        sb = tk.Frame(self, bg=SURFACE, padx=28, pady=9)
         sb.pack(fill="x")
 
-        self._dot = tk.Label(sb, text="●", fg=BORDER, bg=SURFACE, font=FB)
+        self._dot = tk.Label(sb, text="●", fg=BORDER, bg=SURFACE, font=FS)
         self._dot.pack(side="left")
 
         self._sv = tk.StringVar(value="  Tracker not running")
         tk.Label(sb, textvariable=self._sv, bg=SURFACE, fg=MUTED,
-                 font=FB).pack(side="left")
+                 font=FS).pack(side="left")
 
         self._stop_btn = tk.Button(
             sb, text="Stop Tracker", command=self._stop,
             bg=SURFACE, fg=DANGER, activebackground=BG,
             activeforeground=DANGER, relief="flat", bd=0,
-            font=FB, cursor="hand2")
-
-        # ESC to exit fullscreen / close
-        self.bind("<Escape>", lambda e: self.destroy())
+            font=FS, cursor="hand2")
+        # shown only when running
 
     # ── tracker control ───────────────────────────────────────────────────────
     def _start_tracker(self):
@@ -168,6 +152,12 @@ class Launcher(tk.Tk):
         self._clock_v.set(datetime.datetime.now().strftime("%H:%M:%S"))
         self.after(1000, self._tick)
 
+    def _center(self):
+        self.update_idletasks()
+        w = self.winfo_width();  h = self.winfo_height()
+        sw = self.winfo_screenwidth(); sh = self.winfo_screenheight()
+        self.geometry(f"+{(sw-w)//2}+{(sh-h)//2}")
+
     def destroy(self):
         if self._proc and self._proc.poll() is None:
             self._proc.terminate()
@@ -178,7 +168,7 @@ class Launcher(tk.Tk):
 #  MODULE CARD  (button tile)
 # ─────────────────────────────────────────────────────────────────────────────
 class _Card(tk.Frame):
-    W = 380;  H = 150
+    W = 220;  H = 82
 
     def __init__(self, parent, name, desc, color, cmd):
         super().__init__(parent, bg=SURFACE, width=self.W, height=self.H,
@@ -189,19 +179,16 @@ class _Card(tk.Frame):
         self._cmd   = cmd
 
         # left accent bar
-        bar = tk.Frame(self, bg=color, width=7)
+        bar = tk.Frame(self, bg=color, width=4)
         bar.pack(side="left", fill="y")
 
-        inner = tk.Frame(self, bg=SURFACE, padx=24, pady=22)
+        inner = tk.Frame(self, bg=SURFACE, padx=14, pady=12)
         inner.pack(fill="both", expand=True)
 
         self._nl = tk.Label(inner, text=name, bg=SURFACE, fg=TEXT, font=FH, anchor="w")
         self._nl.pack(fill="x")
 
-        tk.Frame(inner, bg=SEP, height=1).pack(fill="x", pady=8)
-
-        self._dl = tk.Label(inner, text=desc, bg=SURFACE, fg=MUTED, font=FB, anchor="w",
-                            wraplength=320, justify="left")
+        self._dl = tk.Label(inner, text=desc, bg=SURFACE, fg=MUTED, font=FS, anchor="w")
         self._dl.pack(fill="x")
 
         for w in (self, bar, inner, self._nl, self._dl):
@@ -210,11 +197,11 @@ class _Card(tk.Frame):
             w.bind("<Button-1>", lambda e: self._cmd())
 
     def _on(self, _=None):
-        self.configure(highlightbackground=self._color, bg=self._color + "11")
+        self.configure(highlightbackground=self._color)
         self._nl.configure(fg=self._color)
 
     def _off(self, _=None):
-        self.configure(highlightbackground=BORDER, bg=SURFACE)
+        self.configure(highlightbackground=BORDER)
         self._nl.configure(fg=TEXT)
 
 
@@ -226,11 +213,14 @@ class NotepadWindow(tk.Toplevel):
         super().__init__(master)
         self.title("Notepad")
         self.configure(bg=SURFACE)
-        self.state("zoomed")
+        self.geometry("740x520")
+        self.minsize(480, 320)
         self._path = None
         self._build()
+        self._center()
 
     def _build(self):
+        # menu bar
         menu = tk.Menu(self, bg=SURFACE, fg=TEXT,
                        activebackground=ACCENT, activeforeground=SURFACE,
                        relief="flat", tearoff=0)
@@ -257,14 +247,15 @@ class NotepadWindow(tk.Toplevel):
         em.add_command(label="Paste",      command=lambda: self._txt.event_generate("<<Paste>>"), accelerator="Ctrl+V")
         em.add_command(label="Select All", command=lambda: self._txt.tag_add("sel","1.0","end"),  accelerator="Ctrl+A")
 
-        tb = tk.Frame(self, bg=SURFACE, pady=8, padx=16)
+        # toolbar
+        tb = tk.Frame(self, bg=SURFACE, pady=6, padx=12)
         tb.pack(fill="x")
 
         def tbtn(text, cmd, fg=TEXT, bold=False):
-            f = ("Segoe UI", 11, "bold") if bold else ("Segoe UI", 11)
+            f = ("Segoe UI", 9, "bold") if bold else FB
             b = tk.Button(tb, text=text, command=cmd, bg=SURFACE, fg=fg,
                           activebackground=BG, activeforeground=fg,
-                          relief="flat", bd=0, font=f, padx=12, pady=4,
+                          relief="flat", bd=0, font=f, padx=10, pady=3,
                           cursor="hand2")
             b.pack(side="left", padx=2)
 
@@ -273,12 +264,13 @@ class NotepadWindow(tk.Toplevel):
         tbtn("Save",    self._save,    fg=ACCENT, bold=True)
         tbtn("Save As", self._save_as, fg=ACCENT)
 
-        tk.Label(tb, text="|", bg=SURFACE, fg=BORDER, font=FB).pack(side="left", padx=8)
+        tk.Label(tb, text="|", bg=SURFACE, fg=BORDER, font=FB).pack(side="left", padx=6)
+
         tk.Label(tb, text="Size", bg=SURFACE, fg=MUTED, font=FS).pack(side="left")
-        self._fsize = tk.IntVar(value=13)
+        self._fsize = tk.IntVar(value=11)
         tk.Spinbox(tb, from_=8, to=32, textvariable=self._fsize, width=3,
                    relief="flat", bg=BG, fg=TEXT, font=FM,
-                   command=self._resize).pack(side="left", padx=8)
+                   command=self._resize).pack(side="left", padx=6)
 
         self._wrap_v = tk.BooleanVar(value=True)
         tk.Checkbutton(tb, text="Wrap", variable=self._wrap_v,
@@ -288,21 +280,22 @@ class NotepadWindow(tk.Toplevel):
 
         self._sv = tk.StringVar(value="Ready")
         tk.Label(tb, textvariable=self._sv, bg=SURFACE, fg=MUTED,
-                 font=FS).pack(side="right", padx=12)
+                 font=FS).pack(side="right", padx=10)
 
         _sep(self)
 
+        # text area
         frame = tk.Frame(self, bg=SURFACE)
         frame.pack(fill="both", expand=True)
 
-        self._tfont = tkfont.Font(family="Consolas", size=13)
+        self._tfont = tkfont.Font(family="Consolas", size=11)
         self._txt = tk.Text(
             frame, bg=SURFACE, fg=TEXT,
             insertbackground=ACCENT,
             selectbackground="#BFDBFE", selectforeground=TEXT,
             font=self._tfont, wrap="word", undo=True,
-            padx=32, pady=20, relief="flat", bd=0,
-            spacing1=3, spacing3=3)
+            padx=18, pady=14, relief="flat", bd=0,
+            spacing1=2, spacing3=2)
 
         vsb = tk.Scrollbar(frame, command=self._txt.yview,
                            relief="flat", bg=BG, troughcolor=BG)
@@ -364,12 +357,18 @@ class NotepadWindow(tk.Toplevel):
         c = self._txt.get("1.0","end").strip()
         self._sv.set(f"{len(c)} chars  ·  {len(c.split()) if c else 0} words")
 
+    def _center(self):
+        self.update_idletasks()
+        w = self.winfo_width(); h = self.winfo_height()
+        sw = self.winfo_screenwidth(); sh = self.winfo_screenheight()
+        self.geometry(f"+{(sw-w)//2}+{(sh-h)//2}")
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  SNAKE GAME
 # ─────────────────────────────────────────────────────────────────────────────
 class GameWindow(tk.Toplevel):
-    CELL=26; COLS=28; ROWS=22
+    CELL=22; COLS=24; ROWS=18
 
     def __init__(self, master):
         super().__init__(master)
@@ -382,24 +381,24 @@ class GameWindow(tk.Toplevel):
     def _build(self):
         W=self.COLS*self.CELL; H=self.ROWS*self.CELL
 
-        top = tk.Frame(self, bg=SURFACE, pady=12, padx=24)
+        top = tk.Frame(self, bg=SURFACE, pady=10, padx=18)
         top.pack(fill="x")
         self._sv  = tk.StringVar(value="Score  0")
         self._hiv = tk.StringVar(value="Best  0")
         tk.Label(top, textvariable=self._sv,  bg=SURFACE, fg=TEXT,
-                 font=("Segoe UI",14,"bold")).pack(side="left")
+                 font=("Segoe UI",12,"bold")).pack(side="left")
         tk.Label(top, textvariable=self._hiv, bg=SURFACE, fg=MUTED,
-                 font=("Segoe UI",14)).pack(side="right")
+                 font=("Segoe UI",12)).pack(side="right")
 
         _sep(self)
 
         self._cv = tk.Canvas(self, width=W, height=H, bg=SURFACE,
                              highlightthickness=1, highlightbackground=BORDER)
-        self._cv.pack(padx=16, pady=12)
+        self._cv.pack(padx=12, pady=10)
 
         _sep(self)
         tk.Label(self, text="Arrow keys / WASD  ·  Click canvas to start or restart",
-                 bg=BG, fg=MUTED, font=FB).pack(pady=10)
+                 bg=BG, fg=MUTED, font=FS).pack(pady=7)
 
         for key,d in [("<Up>",(0,-1)),("<Down>",(0,1)),
                        ("<Left>",(-1,0)),("<Right>",(1,0)),
@@ -460,7 +459,7 @@ class GameWindow(tk.Toplevel):
             self._cv.create_line(x,0,x,H,fill=SEP)
         for y in range(0,H+1,C):
             self._cv.create_line(0,y,W,y,fill=SEP)
-        fx,fy=self._food; p=6
+        fx,fy=self._food; p=5
         self._cv.create_oval(fx*C+p,fy*C+p,fx*C+C-p,fy*C+C-p,
                              fill=DANGER,outline="")
         for i,(x,y) in enumerate(self._snake):
@@ -471,18 +470,18 @@ class GameWindow(tk.Toplevel):
     def _screen(self,title,sub):
         W=self.COLS*self.CELL; H=self.ROWS*self.CELL
         self._cv.delete("all")
-        self._cv.create_rectangle(W//2-170,H//2-60,W//2+170,H//2+64,
+        self._cv.create_rectangle(W//2-150,H//2-52,W//2+150,H//2+56,
                                   fill=SURFACE,outline=BORDER,width=1)
         self._cv.create_text(W//2,H//2-18,text=title,fill=TEXT,
-                             font=("Segoe UI",22,"bold"))
-        self._cv.create_text(W//2,H//2+20,text=sub,fill=MUTED,
-                             font=("Segoe UI",12))
+                             font=("Segoe UI",18,"bold"))
+        self._cv.create_text(W//2,H//2+16,text=sub,fill=MUTED,
+                             font=("Segoe UI",10))
 
     def _center(self):
         self.update_idletasks()
         w=self.winfo_width(); h=self.winfo_height()
         sw=self.winfo_screenwidth(); sh=self.winfo_screenheight()
-        self.geometry(f"+{(sw-w)//2}+{(sh-h)//2}")
+        self.geometry(f"+{(sw-w)//2+260}+{(sh-h)//2}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -545,19 +544,21 @@ class ShortcutsWindow(tk.Toplevel):
         super().__init__(master)
         self.title("Word Shortcuts")
         self.configure(bg=BG)
-        self.state("zoomed")
+        self.geometry("580x540")
+        self.minsize(400,360)
         self._rows=[]
-        self._build()
+        self._build(); self._center()
 
     def _build(self):
-        top = tk.Frame(self, bg=SURFACE, pady=14, padx=24)
+        # search bar
+        top = tk.Frame(self, bg=SURFACE, pady=10, padx=16)
         top.pack(fill="x")
         tk.Label(top, text="Search", bg=SURFACE, fg=MUTED, font=FB).pack(side="left")
         self._q = tk.StringVar()
         self._q.trace_add("write", lambda *_: self._filter())
         e = tk.Entry(top, textvariable=self._q, bg=BG, fg=TEXT,
-                     insertbackground=ACCENT, relief="flat", font=FB, width=30)
-        e.pack(side="left", padx=12, ipady=5)
+                     insertbackground=ACCENT, relief="flat", font=FB, width=24)
+        e.pack(side="left", padx=10, ipady=4)
         e.focus_set()
         tk.Button(top, text="Clear", command=lambda: self._q.set(""),
                   bg=SURFACE, fg=MUTED, activebackground=BG,
@@ -568,6 +569,7 @@ class ShortcutsWindow(tk.Toplevel):
 
         _sep(self)
 
+        # scroll area
         outer = tk.Frame(self, bg=BG)
         outer.pack(fill="both", expand=True)
         cv = tk.Canvas(outer, bg=BG, highlightthickness=0)
@@ -588,21 +590,21 @@ class ShortcutsWindow(tk.Toplevel):
         for section, items in SHORTCUTS.items():
             color = SEC_COLOR.get(section, ACCENT)
             hdr = tk.Frame(self._inner, bg=BG)
-            hdr.pack(fill="x", padx=24, pady=(16,4))
-            tk.Frame(hdr, bg=color, width=4, height=18).pack(side="left")
+            hdr.pack(fill="x", padx=16, pady=(12,2))
+            tk.Frame(hdr, bg=color, width=3, height=15).pack(side="left")
             tk.Label(hdr, text=f"  {section}", bg=BG, fg=color,
-                     font=("Segoe UI",11,"bold")).pack(side="left")
+                     font=("Segoe UI",9,"bold")).pack(side="left")
 
             for key_str, desc in items:
                 row = tk.Frame(self._inner, bg=SURFACE)
-                row.pack(fill="x", padx=24, pady=2)
+                row.pack(fill="x", padx=16, pady=1)
                 tk.Label(row, text=key_str, bg=SURFACE, fg=color,
-                         font=FM, width=22, anchor="w",
-                         padx=14, pady=8).pack(side="left")
+                         font=FM, width=20, anchor="w",
+                         padx=10, pady=6).pack(side="left")
                 tk.Frame(row, bg=SEP, width=1).pack(side="left",
                                                      fill="y", pady=4)
                 tk.Label(row, text=desc, bg=SURFACE, fg=TEXT,
-                         font=FB, anchor="w", padx=16).pack(
+                         font=FB, anchor="w", padx=12).pack(
                              side="left", fill="x", expand=True)
                 self._rows.append((section, key_str, desc, row))
 
@@ -613,8 +615,14 @@ class ShortcutsWindow(tk.Toplevel):
         for section, key_str, desc, row in self._rows:
             show = (not q or q in key_str.lower()
                     or q in desc.lower() or q in section.lower())
-            if show: row.pack(fill="x", padx=24, pady=2)
+            if show: row.pack(fill="x", padx=16, pady=1)
             else:    row.pack_forget()
+
+    def _center(self):
+        self.update_idletasks()
+        w=self.winfo_width(); h=self.winfo_height()
+        sw=self.winfo_screenwidth(); sh=self.winfo_screenheight()
+        self.geometry(f"+{(sw-w)//2}+{(sh-h)//2}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
