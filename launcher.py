@@ -33,7 +33,7 @@ FT  = ("Segoe UI", 28, "bold")   # app title
 FM  = ("Consolas", 12)           # mono
 
 # ── auto-start cooldown (milliseconds) ───────────────────────────────────────
-AUTO_START_DELAY_MS = 1500   # 1.5 seconds — change as needed
+AUTO_START_DELAY_MS = 0  # 1.5 seconds — change as needed
 
 
 def _sep(parent):
