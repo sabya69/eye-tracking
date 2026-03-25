@@ -15,6 +15,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from collections import deque
+from quiz_module import QuizModule
 
 # ── Mouse control ─────────────────────────────────────────────────────────── #
 try:
@@ -84,13 +85,13 @@ class AttentionTracker:
         self.last_l_click    = 0.0;  self.last_r_click = 0.0
 
         # ── Gaze smoothing ────────────────────────────────────────────────── #
-        self.GAZE_ALPHA      = 0.06   # lower = smoother cursor (was 0.15)
+        self.GAZE_ALPHA      = 0.06
         self.gaze_sx_sm      = None
         self.gaze_sy_sm      = None
         self.mouse_mode      = True
         self.gaze_calib      = [0.35, 0.65, 0.30, 0.70]
-        self.MOUSE_SPEED_CAP = 40     # max pixels to move per frame
-        self.MOUSE_DEADZONE  = 4      # ignore jitter under this many pixels
+        self.MOUSE_SPEED_CAP = 40
+        self.MOUSE_DEADZONE  = 4
 
         # ── Drowsiness ────────────────────────────────────────────────────── #
         self.DROWSY_FRAMES   = int(self.fps_cam * 2.5)
@@ -114,11 +115,13 @@ class AttentionTracker:
         self.head_status     = "FORWARD"
         self.attn_history    = deque(maxlen=150)
 
-        # ── Sub-systems (imported from other files) ────────────────────────── #
+        # ── Sub-systems ───────────────────────────────────────────────────── #
         self.gaze_cursor = GazeCursor()
         self.vkb         = VirtualKeyboard()
         self.pad         = TextPad()
-        self.vkb.link_textpad(self.pad)   # ENTER on keyboard → TextPad
+        self.vkb.link_textpad(self.pad)
+        self.quiz        = QuizModule()
+        self.quiz_active = False
 
         print("\n╔══════════════════════════════════════════════╗")
         print("║   Attention Tracker v5                      ║")
@@ -127,6 +130,7 @@ class AttentionTracker:
         print("║  K   → Toggle virtual keyboard             ║")
         print("║  T   → Toggle text pad                     ║")
         print("║  S   → Save text pad to .txt NOW           ║")
+        print("║  Q   → Start / close gaze quiz             ║")
         print("║  M   → Toggle mouse control                ║")
         print("║  ESC → End session + report                ║")
         print("╚══════════════════════════════════════════════╝\n")
@@ -288,7 +292,7 @@ class AttentionTracker:
 
     def _draw_hud(self, frame, fps, ts, lear, rear):
         h, w = frame.shape[:2]
-        PW = 315;  PH = 360
+        PW = 315;  PH = 385                          # slightly taller for quiz row
         self._rrect(frame, (10,10), (10+PW,10+PH), (15,15,15), alpha=0.68)
 
         ac = {"HIGH":(50,220,80),"MEDIUM":(40,180,255),
@@ -313,17 +317,22 @@ class AttentionTracker:
         n_chars = len(self.pad.buffer)
         put(f"Text Pad : {'ON (T)' if self.pad.visible else 'OFF (T)'}"
             + (f"  [{n_chars}ch]" if n_chars else ""), 238, col=pc)
-        put(f"Attn     : {self.live_attn} ({self.live_attn_pct}%)", 266, sc=0.66, col=ac, bld=2)
+
+        # ── Quiz status row (PATCH) ───────────────────────────────────────── #
+        qc = (0,180,255) if self.quiz_active else (80,80,100)
+        put(f"Quiz     : {'ACTIVE (Q)' if self.quiz_active else 'OFF (Q)'}", 260, col=qc)
+
+        put(f"Attn     : {self.live_attn} ({self.live_attn_pct}%)", 288, sc=0.66, col=ac, bld=2)
 
         # progress bar
-        bx,by,bw,bh = 10,278,PW,11
+        bx,by,bw,bh = 10,300,PW,11
         cv2.rectangle(frame,(bx,by),(bx+bw,by+bh),(50,50,50),-1)
         cv2.rectangle(frame,(bx,by),(bx+int(bw*self.live_attn_pct/100),by+bh),ac,-1)
         cv2.rectangle(frame,(bx,by),(bx+bw,by+bh),(100,100,100),1)
 
         # sparkline
         if len(self.attn_history) > 2:
-            sx,sy,sw,sh = 10,293,PW,46
+            sx,sy,sw,sh = 10,315,PW,46
             self._rrect(frame,(sx,sy),(sx+sw,sy+sh),(15,15,15),alpha=0.5)
             hist = list(self.attn_history);  n = len(hist)
             pts  = [(sx+int(i/(n-1)*sw), sy+sh-int(hist[i]/100*sh)) for i in range(n)]
@@ -358,7 +367,8 @@ class AttentionTracker:
             cv2.putText(frame,f"Typing: {self.vkb.typed_text[-32:]}",(w//2-230,h-30),
                         cv2.FONT_HERSHEY_SIMPLEX,0.58,(0,220,255),1,cv2.LINE_AA)
 
-        cv2.putText(frame,"G=cursor  K=keyboard  T=textpad  S=save  M=mouse  ESC=end",
+        # ── Bottom hint line (PATCH: S→Q) ─────────────────────────────────── #
+        cv2.putText(frame,"G=cursor  K=keyboard  T=textpad  Q=quiz  M=mouse  ESC=end",
                     (w//2-230,h-10),cv2.FONT_HERSHEY_SIMPLEX,0.38,(100,100,100),1,cv2.LINE_AA)
 
     # =========================================================================
@@ -380,6 +390,9 @@ class AttentionTracker:
             lear = rear = 0.0
             blink_flag  = 0
             face_ok     = bool(res.face_landmarks)
+
+            # gx/gy defaults (used by quiz overlay even when face not detected)
+            gx = gy = 0.5
 
             if face_ok:
                 lm = res.face_landmarks[0]
@@ -496,22 +509,50 @@ class AttentionTracker:
             fps  = 1.0/(now2-self.prev_time+1e-9)
             self.prev_time = now2
 
-            # render
+            # ── Render ────────────────────────────────────────────────────── #
             if face_ok:
                 self.gaze_cursor.draw(frame)
             self._draw_hud(frame, fps, ts, lear, rear)
-            cv2.imshow("Attention Tracking System", frame)
-            self.vkb.render()
-            self.pad.render()
 
-            # key handling
+            # ── Quiz overlay (PATCH 5) ─────────────────────────────────────── #
+            if self.quiz_active:
+                _gnx   = gx if face_ok else 0.5
+                _gny   = gy if face_ok else 0.5
+                _blink = (blink_flag == 1)
+                status = self.quiz.update(frame, _gnx, _gny, _blink)
+                if status == "done":
+                    self.quiz_active = False
+                    self.quiz.save_report()
+
+            cv2.imshow("Attention Tracking System", frame)
+
+            # Only show keyboard / pad when quiz is NOT active
+            if not self.quiz_active:
+                self.vkb.render()
+                self.pad.render()
+
+            # ── Key handling (PATCH 4) ─────────────────────────────────────── #
             key = cv2.waitKey(1) & 0xFF
-            if   key == 27:                  break
-            elif key in (ord('m'),ord('M')): self.mouse_mode = not self.mouse_mode
-            elif key in (ord('k'),ord('K')): self.vkb.toggle()
-            elif key in (ord('t'),ord('T')): self.pad.toggle()
-            elif key in (ord('s'),ord('S')): self.pad.save_now()
-            elif key in (ord('g'),ord('G')): self.gaze_cursor.active = not self.gaze_cursor.active
+            if key == 27:
+                if self.quiz_active:            # ESC first closes quiz
+                    self.quiz.stop()
+                    self.quiz_active = False
+                    self.quiz.save_report()
+                else:
+                    break                       # ESC again → end session
+            elif key in (ord('q'), ord('Q')):
+                if not self.quiz_active:
+                    self.quiz.start()
+                    self.quiz_active = True
+                else:
+                    self.quiz.stop()
+                    self.quiz_active = False
+                    self.quiz.save_report()
+            elif key in (ord('m'), ord('M')): self.mouse_mode = not self.mouse_mode
+            elif key in (ord('k'), ord('K')): self.vkb.toggle()
+            elif key in (ord('t'), ord('T')): self.pad.toggle()
+            elif key in (ord('s'), ord('S')): self.pad.save_now()
+            elif key in (ord('g'), ord('G')): self.gaze_cursor.active = not self.gaze_cursor.active
 
         self.cap.release()
         cv2.destroyAllWindows()
