@@ -33,7 +33,7 @@ FT  = ("Segoe UI", 28, "bold")   # app title
 FM  = ("Consolas", 12)           # mono
 
 # ── auto-start cooldown (milliseconds) ───────────────────────────────────────
-AUTO_START_DELAY_MS = 0  # 1.5 seconds — change as needed
+AUTO_START_DELAY_MS = 0  # 15 seconds — change as needed
 
 
 def _sep(parent):
@@ -51,9 +51,6 @@ class Launcher(tk.Tk):
 
         # ── Fullscreen ────────────────────────────────────────────────────────
         self.state("zoomed")          # Windows: maximized (keeps title bar)
-        # Uncomment the next line for true borderless fullscreen instead:
-        # self.attributes("-fullscreen", True)
-
         self.resizable(True, True)
         self._proc = None
         self._build()
@@ -71,7 +68,7 @@ class Launcher(tk.Tk):
             self.after(1000, self._schedule_autostart)
         else:
             self._sv.set("  Auto-starting Eye Tracker …")
-            self.after(200, self._start_tracker)   # tiny pause so msg is visible
+            self.after(200, self._start_tracker)
 
     def _build(self):
         # ── header ────────────────────────────────────────────────────────────
@@ -96,7 +93,6 @@ class Launcher(tk.Tk):
         _sep(self)
 
         # ── card grid ─────────────────────────────────────────────────────────
-        # Use a centred container that expands with the window
         wrapper = tk.Frame(self, bg=BG)
         wrapper.pack(fill="both", expand=True)
 
@@ -139,7 +135,6 @@ class Launcher(tk.Tk):
             activeforeground=DANGER, relief="flat", bd=0,
             font=FB, cursor="hand2")
 
-        # ESC to exit fullscreen / close
         self.bind("<Escape>", lambda e: self.destroy())
 
     # ── tracker control ───────────────────────────────────────────────────────
@@ -205,7 +200,6 @@ class _Card(tk.Frame):
         self._color = color
         self._cmd   = cmd
 
-        # left accent bar
         bar = tk.Frame(self, bg=color, width=7)
         bar.pack(side="left", fill="y")
 
@@ -227,7 +221,7 @@ class _Card(tk.Frame):
             w.bind("<Button-1>", lambda e: self._cmd())
 
     def _on(self, _=None):
-        self.configure(highlightbackground=self._color, bg=self._color + "11")
+        self.configure(highlightbackground=self._color, bg=SURFACE)
         self._nl.configure(fg=self._color)
 
     def _off(self, _=None):
@@ -236,7 +230,7 @@ class _Card(tk.Frame):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  NOTEPAD
+#  NOTEPAD  — with integrated on-screen virtual keyboard
 # ─────────────────────────────────────────────────────────────────────────────
 class NotepadWindow(tk.Toplevel):
     def __init__(self, master):
@@ -246,6 +240,8 @@ class NotepadWindow(tk.Toplevel):
         self.state("zoomed")
         self._path = None
         self._build()
+        # ── Auto-open virtual keyboard on launch ──────────────────────────────
+        self.after(300, self._open_keyboard)
 
     def _build(self):
         menu = tk.Menu(self, bg=SURFACE, fg=TEXT,
@@ -260,6 +256,7 @@ class NotepadWindow(tk.Toplevel):
         fm.add_command(label="Open",    command=self._open,    accelerator="Ctrl+O")
         fm.add_command(label="Save",    command=self._save,    accelerator="Ctrl+S")
         fm.add_command(label="Save As", command=self._save_as, accelerator="Ctrl+Shift+S")
+        fm.add_command(label="Open Keyboard", command=self._open_keyboard, accelerator="Ctrl+Shift+K")
         fm.add_separator()
         fm.add_command(label="Exit", command=self.destroy)
 
@@ -289,6 +286,8 @@ class NotepadWindow(tk.Toplevel):
         tbtn("Open",    self._open)
         tbtn("Save",    self._save,    fg=ACCENT, bold=True)
         tbtn("Save As", self._save_as, fg=ACCENT)
+        # ── Keyboard toggle button in toolbar ─────────────────────────────────
+        tbtn("⌨ Keyboard", self._open_keyboard, fg=PURPLE, bold=True)
 
         tk.Label(tb, text="|", bg=SURFACE, fg=BORDER, font=FB).pack(side="left", padx=8)
         tk.Label(tb, text="Size", bg=SURFACE, fg=MUTED, font=FS).pack(side="left")
@@ -328,10 +327,64 @@ class NotepadWindow(tk.Toplevel):
         self._txt.pack(fill="both", expand=True)
         self._txt.bind("<KeyRelease>", self._update_sv)
 
-        self.bind("<Control-s>", lambda e: self._save())
-        self.bind("<Control-S>", lambda e: self._save_as())
-        self.bind("<Control-n>", lambda e: self._new())
-        self.bind("<Control-o>", lambda e: self._open())
+        self.bind("<Control-s>",       lambda e: self._save())
+        self.bind("<Control-S>",       lambda e: self._save_as())
+        self.bind("<Control-n>",       lambda e: self._new())
+        self.bind("<Control-o>",       lambda e: self._open())
+        self.bind("<Control-K>",       lambda e: self._open_keyboard())
+
+        # Keep reference to the keyboard window
+        self._kb_win = None
+
+    # ── keyboard integration ──────────────────────────────────────────────────
+    def _open_keyboard(self):
+        """
+        Launch virtual_keyboard.py as a subprocess, or if it exposes a
+        Toplevel class, open it inline.  Falls back to the subprocess approach
+        so the code works even if virtual_keyboard is only a script.
+        """
+        # If a keyboard window is already open and alive, just raise it
+        if self._kb_win is not None:
+            try:
+                if self._kb_win.winfo_exists():
+                    self._kb_win.lift()
+                    self._kb_win.focus_force()
+                    return
+            except Exception:
+                pass
+
+        # Try to import and open inline (preferred — text goes straight to _txt)
+        try:
+            import importlib, virtual_keyboard as vkb
+            importlib.reload(vkb)
+
+            # Many virtual-keyboard implementations expose a class called
+            # VirtualKeyboard, KeyboardWindow, or similar.
+            KbClass = None
+            for name in ("VirtualKeyboard", "KeyboardWindow", "Keyboard"):
+                KbClass = getattr(vkb, name, None)
+                if KbClass:
+                    break
+
+            if KbClass:
+                self._kb_win = KbClass(self, self._txt)   # pass text widget
+                self._kb_win.lift()
+                return
+        except Exception:
+            pass
+
+        # Fallback: open virtual_keyboard.py as a subprocess
+        kb_script = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "virtual_keyboard.py")
+        if os.path.exists(kb_script):
+            subprocess.Popen([sys.executable, kb_script])
+        else:
+            # Last resort: show the built-in on-screen keyboard panel
+            self._show_builtin_keyboard()
+
+    def _show_builtin_keyboard(self):
+        """Built-in fallback on-screen keyboard panel attached below the editor."""
+        OnScreenKeyboard(self, self._txt)
 
     def insert_text(self, text):
         self._txt.insert("end", text)
@@ -383,7 +436,121 @@ class NotepadWindow(tk.Toplevel):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  SNAKE GAME
+#  BUILT-IN ON-SCREEN KEYBOARD  (fallback when virtual_keyboard.py not found)
+# ─────────────────────────────────────────────────────────────────────────────
+class OnScreenKeyboard(tk.Toplevel):
+    """
+    A simple full QWERTY on-screen keyboard that types into a target
+    tk.Text widget.  Opens as a small always-on-top window.
+    """
+
+    ROWS = [
+        ["`","1","2","3","4","5","6","7","8","9","0","-","=","⌫"],
+        ["Tab","q","w","e","r","t","y","u","i","o","p","[","]","\\"],
+        ["Caps","a","s","d","f","g","h","j","k","l",";","'","Enter"],
+        ["Shift","z","x","c","v","b","n","m",",",".","/","Shift"],
+        ["Ctrl","Alt","Space","Alt","Ctrl"],
+    ]
+
+    SHIFT_MAP = {
+        "`":"~","1":"!","2":"@","3":"#","4":"$","5":"%","6":"^",
+        "7":"&","8":"*","9":"(","0":")","-":"_","=":"+","[":"{",
+        "]":"}","\\":"|",";":":","'":'"',",":"<",".":">","/":"?",
+    }
+
+    WIDE = {"⌫":2,"Tab":1.5,"Caps":1.8,"Enter":2,"Shift":2.3,"Space":6,"Ctrl":1.5,"Alt":1.5}
+
+    def __init__(self, master, target: tk.Text):
+        super().__init__(master)
+        self.title("On-Screen Keyboard")
+        self.configure(bg=BG)
+        self.resizable(False, False)
+        self.attributes("-topmost", True)
+        self._target = target
+        self._shift  = False
+        self._caps   = False
+        self._build()
+        self._center()
+
+    def _build(self):
+        pad = tk.Frame(self, bg=BG, padx=8, pady=8)
+        pad.pack()
+
+        for row_keys in self.ROWS:
+            row_frame = tk.Frame(pad, bg=BG)
+            row_frame.pack(pady=3)
+            for key in row_keys:
+                w = self.WIDE.get(key, 1)
+                btn = tk.Button(
+                    row_frame,
+                    text=key,
+                    width=int(w * 3),
+                    font=("Segoe UI", 10),
+                    bg=SURFACE, fg=TEXT,
+                    activebackground=ACCENT,
+                    activeforeground=SURFACE,
+                    relief="flat",
+                    bd=0,
+                    highlightbackground=BORDER,
+                    highlightthickness=1,
+                    padx=4, pady=6,
+                    cursor="hand2",
+                    command=lambda k=key: self._press(k)
+                )
+                btn.pack(side="left", padx=2)
+
+        # Info label
+        tk.Label(pad, text="Click keys to type into Notepad",
+                 bg=BG, fg=MUTED, font=FS).pack(pady=(6,0))
+
+    def _press(self, key):
+        t = self._target
+        if key == "⌫":
+            # Delete last character
+            pos = t.index("insert")
+            if pos != "1.0":
+                t.delete(f"insert-1c", "insert")
+        elif key in ("Shift",):
+            self._shift = not self._shift
+        elif key == "Caps":
+            self._caps = not self._caps
+        elif key == "Enter":
+            t.insert("insert", "\n")
+        elif key == "Tab":
+            t.insert("insert", "\t")
+        elif key == "Space":
+            t.insert("insert", " ")
+        elif key in ("Ctrl", "Alt"):
+            pass  # modifier stubs
+        else:
+            char = key
+            # Apply shift map
+            if self._shift and char in self.SHIFT_MAP:
+                char = self.SHIFT_MAP[char]
+            elif char.isalpha():
+                # Caps XOR Shift
+                if self._caps ^ self._shift:
+                    char = char.upper()
+                else:
+                    char = char.lower()
+            t.insert("insert", char)
+            # Auto-release shift after one key
+            if self._shift:
+                self._shift = False
+        t.see("insert")
+        t.focus_set()
+
+    def _center(self):
+        self.update_idletasks()
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        w  = self.winfo_width()
+        h  = self.winfo_height()
+        self.geometry(f"+{(sw-w)//2}+{sh-h-60}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  SNAKE GAME  — with on-screen D-pad so no physical keyboard needed
 # ─────────────────────────────────────────────────────────────────────────────
 class GameWindow(tk.Toplevel):
     CELL=26; COLS=28; ROWS=22
@@ -410,14 +577,75 @@ class GameWindow(tk.Toplevel):
 
         _sep(self)
 
-        self._cv = tk.Canvas(self, width=W, height=H, bg=SURFACE,
+        # ── main area: canvas + d-pad side by side ────────────────────────────
+        main = tk.Frame(self, bg=BG)
+        main.pack(fill="both", expand=True)
+
+        self._cv = tk.Canvas(main, width=W, height=H, bg=SURFACE,
                              highlightthickness=1, highlightbackground=BORDER)
-        self._cv.pack(padx=16, pady=12)
+        self._cv.pack(side="left", padx=(16,8), pady=12)
+
+        # ── On-screen D-Pad ───────────────────────────────────────────────────
+        dpad_frame = tk.Frame(main, bg=BG)
+        dpad_frame.pack(side="left", padx=(8,16), pady=12, anchor="center")
+
+        # Title above d-pad
+        tk.Label(dpad_frame, text="Controls", bg=BG, fg=MUTED,
+                 font=("Segoe UI", 10, "bold")).pack(pady=(0,10))
+
+        self._start_btn = tk.Button(
+            dpad_frame, text="▶  Start / Restart",
+            command=self._start,
+            bg=GREEN, fg=SURFACE,
+            activebackground="#15803D", activeforeground=SURFACE,
+            relief="flat", bd=0, font=("Segoe UI",11,"bold"),
+            padx=16, pady=10, cursor="hand2")
+        self._start_btn.pack(fill="x", pady=(0,20))
+
+        tk.Label(dpad_frame, text="Direction", bg=BG, fg=MUTED,
+                 font=("Segoe UI", 9)).pack()
+
+        # D-Pad grid
+        dpad = tk.Frame(dpad_frame, bg=BG)
+        dpad.pack(pady=4)
+
+        def dpad_btn(parent, text, row, col, dx, dy):
+            b = tk.Button(
+                parent, text=text,
+                width=4, height=2,
+                font=("Segoe UI", 14, "bold"),
+                bg=SURFACE, fg=TEXT,
+                activebackground=ACCENT,
+                activeforeground=SURFACE,
+                relief="flat", bd=0,
+                highlightbackground=BORDER,
+                highlightthickness=1,
+                cursor="hand2",
+                command=lambda: self._steer(dx, dy))
+            b.grid(row=row, column=col, padx=3, pady=3)
+            return b
+
+        dpad_btn(dpad, "▲", 0, 1,  0, -1)   # Up
+        dpad_btn(dpad, "◀", 1, 0, -1,  0)   # Left
+        dpad_btn(dpad, "●", 1, 1,  0,  0)   # Centre (no-op)
+        dpad_btn(dpad, "▶", 1, 2,  1,  0)   # Right
+        dpad_btn(dpad, "▼", 2, 1,  0,  1)   # Down
+
+        # WASD labels beneath d-pad
+        tk.Label(dpad_frame, text="W A S D  ·  Arrow keys also work",
+                 bg=BG, fg=MUTED, font=("Segoe UI", 8)).pack(pady=(12,0))
+
+        # Speed display
+        self._speed_v = tk.StringVar(value="Speed: —")
+        tk.Label(dpad_frame, textvariable=self._speed_v,
+                 bg=BG, fg=MUTED, font=("Segoe UI", 9)).pack(pady=(8,0))
 
         _sep(self)
-        tk.Label(self, text="Arrow keys / WASD  ·  Click canvas to start or restart",
+
+        tk.Label(self, text="Arrow keys / WASD  ·  Click canvas or Start button to play",
                  bg=BG, fg=MUTED, font=FB).pack(pady=10)
 
+        # Key bindings
         for key,d in [("<Up>",(0,-1)),("<Down>",(0,1)),
                        ("<Left>",(-1,0)),("<Right>",(1,0)),
                        ("<w>",(0,-1)),("<s>",(0,1)),
@@ -433,13 +661,17 @@ class GameWindow(tk.Toplevel):
         self._score=0; self._alive=False
         self._food=self._spawn()
         self._sv.set("Score  0")
-        self._screen("Snake","Click to start")
+        self._speed_v.set("Speed: —")
+        self._screen("Snake","Click Start or canvas to begin")
 
     def _start(self):
         if self._aid: self.after_cancel(self._aid)
         self._reset(); self._alive=True; self._loop()
+        self.focus_set()  # ensure keyboard input works
 
     def _steer(self,dx,dy):
+        if dy == 0 and dx == 0:
+            return  # centre button no-op
         if (dx,dy)!=(-self._dx,-self._dy):
             self._dx,self._dy=dx,dy
 
@@ -458,7 +690,8 @@ class GameWindow(tk.Toplevel):
             if self._score>self._hi:
                 self._hi=self._score
                 self._hiv.set(f"Best  {self._hi}")
-            self._screen("Game Over",f"Score: {self._score}  ·  Click to restart")
+            self._screen("Game Over",f"Score: {self._score}  ·  Click Start to restart")
+            self._speed_v.set("Speed: —")
             return
         self._snake.insert(0,(nx,ny))
         if (nx,ny)==self._food:
@@ -466,8 +699,12 @@ class GameWindow(tk.Toplevel):
             self._food=self._spawn()
         else:
             self._snake.pop()
+        # Update speed indicator
+        delay = max(60,130-self._score//5)
+        level = max(1, (130-delay)//10 + 1)
+        self._speed_v.set(f"Speed: {'▮'*min(level,10)}")
         self._draw()
-        self._aid=self.after(max(60,130-self._score//5),self._loop)
+        self._aid=self.after(delay,self._loop)
 
     def _draw(self):
         C=self.CELL

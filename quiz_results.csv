@@ -1,9 +1,1 @@
 q_idx,question,category,selected,correct_ans,correct,react_time,fixation_A,fixation_B,fixation_C,fixation_D,hesitation
-0,Which part of the brain is primarily responsible for vision?,Neuroscience,2,2,True,0.1,0.0,0.0,0.07,0.0,0.0
-1,What does EAR stand for in eye-tracking research?,Eye Tracking,2,1,False,1.54,0.0,0.0,1.51,0.0,0.0
-2,Which technology does this tracker use for landmark detection?,Computer Vision,2,2,True,1.57,0.0,0.0,1.53,0.0,0.0
-3,A blink rate of how many per minute is considered normal?,Physiology,3,1,False,2.07,0.0,0.0,1.25,0.44,1.25
-4,What does a HIGH attention score (≥70%) indicate?,Attention,3,2,False,0.8,0.0,0.0,0.39,0.21,0.39
-5,Which metric measures how much the gaze position varies?,Eye Tracking,3,2,False,1.09,0.0,0.0,0.64,0.33,0.64
-6,What is the primary output file format for session logs?,Software,1,2,False,1.22,0.0,0.41,0.61,0.0,0.61
-7,Which colour channel is used by OpenCV by default?,Computer Vision,0,2,False,1.14,0.17,0.0,0.84,0.0,0.84
