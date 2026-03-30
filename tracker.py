@@ -15,7 +15,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from collections import deque
-from quiz_module import QuizModule
+from quiz_module import QuizModule                      # ← V2 addition
 
 # ── Mouse control ─────────────────────────────────────────────────────────── #
 try:
@@ -76,22 +76,34 @@ class AttentionTracker:
         self.RIGHT_EYE   = [362, 385, 387, 263, 373, 380]
         self.L_EYE_L     = 33;   self.L_EYE_R = 133
 
-        # ── Blink ─────────────────────────────────────────────────────────── #
+        # ── Blink (stats / drowsiness only) ──────────────────────────────── #
         self.EAR_TH_L        = 0.23;  self.EAR_TH_R = 0.23
         self.CONSEC_FRAMES   = 3
         self.l_blink_ctr     = 0;  self.r_blink_ctr = 0
         self.l_blink_total   = 0;  self.r_blink_total = 0
+
+        # ── Left blink click cooldown ─────────────────────────────────────── #
         self.CLICK_COOL      = 0.65
         self.last_l_click    = 0.0;  self.last_r_click = 0.0
 
+        # ── Dwell-to-click (hold gaze to open file/folder) ────────────────── #
+        self.DWELL_CLICK_TIME  = 1.0    # seconds to hold gaze before click
+        self.DWELL_RADIUS_TH   = 45     # px – gaze must stay within this radius
+        self.DWELL_COOLDOWN    = 1.2    # seconds between dwell-clicks
+        self.dwell_anchor_x    = None   # screen px where dwell started
+        self.dwell_anchor_y    = None
+        self.dwell_start_t     = None   # when dwell started
+        self.dwell_progress    = 0.0    # 0.0 → 1.0
+        self.last_dwell_click  = 0.0    # last dwell-click timestamp
+
         # ── Gaze smoothing ────────────────────────────────────────────────── #
-        self.GAZE_ALPHA      = 0.06
+        self.GAZE_ALPHA      = 0.06   # lower = smoother cursor (was 0.15)
         self.gaze_sx_sm      = None
         self.gaze_sy_sm      = None
         self.mouse_mode      = True
         self.gaze_calib      = [0.35, 0.65, 0.30, 0.70]
-        self.MOUSE_SPEED_CAP = 40
-        self.MOUSE_DEADZONE  = 4
+        self.MOUSE_SPEED_CAP = 40     # max pixels to move per frame
+        self.MOUSE_DEADZONE  = 4      # ignore jitter under this many pixels
 
         # ── Drowsiness ────────────────────────────────────────────────────── #
         self.DROWSY_FRAMES   = int(self.fps_cam * 2.5)
@@ -115,13 +127,13 @@ class AttentionTracker:
         self.head_status     = "FORWARD"
         self.attn_history    = deque(maxlen=150)
 
-        # ── Sub-systems ───────────────────────────────────────────────────── #
+        # ── Sub-systems (imported from other files) ────────────────────────── #
         self.gaze_cursor = GazeCursor()
         self.vkb         = VirtualKeyboard()
         self.pad         = TextPad()
-        self.vkb.link_textpad(self.pad)
-        self.quiz        = QuizModule()
-        self.quiz_active = False
+        self.vkb.link_textpad(self.pad)   # ENTER on keyboard → TextPad
+        self.quiz        = QuizModule()    # ← V2 addition
+        self.quiz_active = False           # ← V2 addition
 
         print("\n╔══════════════════════════════════════════════╗")
         print("║   Attention Tracker v5                      ║")
@@ -130,7 +142,7 @@ class AttentionTracker:
         print("║  K   → Toggle virtual keyboard             ║")
         print("║  T   → Toggle text pad                     ║")
         print("║  S   → Save text pad to .txt NOW           ║")
-        print("║  Q   → Start / close gaze quiz             ║")
+        print("║  Q   → Start / close gaze quiz             ║")  # ← V2 addition
         print("║  M   → Toggle mouse control                ║")
         print("║  ESC → End session + report                ║")
         print("╚══════════════════════════════════════════════╝\n")
@@ -318,7 +330,7 @@ class AttentionTracker:
         put(f"Text Pad : {'ON (T)' if self.pad.visible else 'OFF (T)'}"
             + (f"  [{n_chars}ch]" if n_chars else ""), 238, col=pc)
 
-        # ── Quiz status row (PATCH) ───────────────────────────────────────── #
+        # ── Quiz status row ───────────────────────────────────────────────── #
         qc = (0,180,255) if self.quiz_active else (80,80,100)
         put(f"Quiz     : {'ACTIVE (Q)' if self.quiz_active else 'OFF (Q)'}", 260, col=qc)
 
@@ -353,23 +365,32 @@ class AttentionTracker:
             cv2.putText(frame,f"HEAD: {self.head_status}",(w-295,40),
                         cv2.FONT_HERSHEY_SIMPLEX,0.72,(30,165,255),2,cv2.LINE_AA)
 
-        # click flash
+        # dwell-click flash (V1 original)
         now = time.time()
-        if now-self.last_l_click < 0.35:
-            cv2.putText(frame,"< LEFT CLICK",(w//2-120,h-55),
+        if now-self.last_dwell_click < 0.40:
+            cv2.putText(frame,"CLICK!",(w//2-65,h-55),
                         cv2.FONT_HERSHEY_DUPLEX,0.95,(0,220,255),2,cv2.LINE_AA)
-        elif now-self.last_r_click < 0.35:
-            cv2.putText(frame,"RIGHT CLICK >",(w//2-120,h-55),
-                        cv2.FONT_HERSHEY_DUPLEX,0.95,(255,140,0),2,cv2.LINE_AA)
+
+        # dwell progress ring at cursor position (V1 original)
+        if self.dwell_progress > 0.05 and self.dwell_anchor_x is not None:
+            ring_x = int(self.dwell_anchor_x / self.screen_w * w)
+            ring_y = int(self.dwell_anchor_y / self.screen_h * h)
+            radius = 28
+            angle  = int(360 * self.dwell_progress)
+            cv2.circle(frame, (ring_x, ring_y), radius, (40, 40, 40), 2, cv2.LINE_AA)
+            cv2.ellipse(frame, (ring_x, ring_y), (radius, radius),
+                        -90, 0, angle, (0, 220, 255), 3, cv2.LINE_AA)
+            pct_txt = f"{int(self.dwell_progress*100)}%"
+            cv2.putText(frame, pct_txt, (ring_x-16, ring_y+5),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0,220,255), 1, cv2.LINE_AA)
 
         # current typed text preview
         if self.vkb.visible and self.vkb.typed_text:
             cv2.putText(frame,f"Typing: {self.vkb.typed_text[-32:]}",(w//2-230,h-30),
                         cv2.FONT_HERSHEY_SIMPLEX,0.58,(0,220,255),1,cv2.LINE_AA)
 
-        # ── Bottom hint line (PATCH: S→Q) ─────────────────────────────────── #
-        cv2.putText(frame,"G=cursor  K=keyboard  T=textpad  Q=quiz  M=mouse  ESC=end",
-                    (w//2-230,h-10),cv2.FONT_HERSHEY_SIMPLEX,0.38,(100,100,100),1,cv2.LINE_AA)
+        cv2.putText(frame,"G=cursor  K=keyboard  T=textpad  S=save  Q=quiz  M=mouse  ESC=end",
+                    (w//2-260,h-10),cv2.FONT_HERSHEY_SIMPLEX,0.38,(100,100,100),1,cv2.LINE_AA)
 
     # =========================================================================
     #  MAIN LOOP
@@ -410,33 +431,25 @@ class AttentionTracker:
                 rear = self._ear(re)
                 now  = time.time()
 
-                # left blink
+                # ── LEFT BLINK → double click (V1 original) ───────────────── #
                 if lear < self.EAR_TH_L:
                     self.l_blink_ctr += 1;  self.drowsy_ctr += 1
                 else:
                     if self.l_blink_ctr >= self.CONSEC_FRAMES:
                         self.l_blink_total += 1;  blink_flag = 1
                         self.rolling_blinks.append(ts)
-                        if self.vkb.visible:
-                            self.vkb.blink_press()
-                        elif self.pad.visible:
-                            self.pad.blink_press()
-                        elif self.mouse_mode and MOUSE_AVAILABLE and now-self.last_l_click>self.CLICK_COOL:
-                            pyautogui.click(button='left')
+                        if self.mouse_mode and MOUSE_AVAILABLE and now-self.last_l_click>self.CLICK_COOL:
+                            pyautogui.doubleClick(button='left')
                             self.last_l_click = now
                     self.l_blink_ctr = 0
 
-                # right blink
+                # ── RIGHT BLINK — counting only (V1 original) ─────────────── #
                 if rear < self.EAR_TH_R:
                     self.r_blink_ctr += 1;  self.drowsy_ctr += 1
                 else:
                     if self.r_blink_ctr >= self.CONSEC_FRAMES:
                         self.r_blink_total += 1;  blink_flag = 1
                         self.rolling_blinks.append(ts)
-                        if not self.vkb.visible and not self.pad.visible:
-                            if self.mouse_mode and MOUSE_AVAILABLE and now-self.last_r_click>self.CLICK_COOL:
-                                pyautogui.click(button='right')
-                                self.last_r_click = now
                     self.r_blink_ctr = 0
 
                 # drowsy decay when both eyes open
@@ -477,6 +490,38 @@ class AttentionTracker:
                             dy = int(dy * scale)
                         pyautogui.moveRel(dx, dy)
 
+                # ── dwell-to-click (V1 original) ──────────────────────────── #
+                if MOUSE_AVAILABLE and self.mouse_mode and not self.vkb.visible and not self.pad.visible:
+                    cur_x, cur_y = pyautogui.position()
+                    if self.dwell_anchor_x is None:
+                        self.dwell_anchor_x = cur_x
+                        self.dwell_anchor_y = cur_y
+                        self.dwell_start_t  = now
+                        self.dwell_progress = 0.0
+                    else:
+                        dist_from_anchor = ((cur_x - self.dwell_anchor_x)**2
+                                          + (cur_y - self.dwell_anchor_y)**2) ** 0.5
+                        if dist_from_anchor > self.DWELL_RADIUS_TH:
+                            self.dwell_anchor_x = cur_x
+                            self.dwell_anchor_y = cur_y
+                            self.dwell_start_t  = now
+                            self.dwell_progress = 0.0
+                        else:
+                            elapsed = now - self.dwell_start_t
+                            self.dwell_progress = min(1.0, elapsed / self.DWELL_CLICK_TIME)
+                            if self.dwell_progress >= 1.0 and now - self.last_dwell_click > self.DWELL_COOLDOWN:
+                                pyautogui.doubleClick(button='left')
+                                self.last_dwell_click = now
+                                self.last_l_click     = now
+                                self.dwell_anchor_x = None
+                                self.dwell_anchor_y = None
+                                self.dwell_start_t  = None
+                                self.dwell_progress = 0.0
+                else:
+                    # reset dwell when keyboard/pad is visible
+                    self.dwell_progress = 0.0
+                    self.dwell_anchor_x = None
+
                 # gaze → virtual keyboard
                 if self.vkb.visible:
                     kw, kh = self.vkb.window_size
@@ -514,7 +559,7 @@ class AttentionTracker:
                 self.gaze_cursor.draw(frame)
             self._draw_hud(frame, fps, ts, lear, rear)
 
-            # ── Quiz overlay (PATCH 5) ─────────────────────────────────────── #
+            # ── Quiz overlay ──────────────────────────────────────────────── #
             if self.quiz_active:
                 _gnx   = gx if face_ok else 0.5
                 _gny   = gy if face_ok else 0.5
@@ -531,7 +576,7 @@ class AttentionTracker:
                 self.vkb.render()
                 self.pad.render()
 
-            # ── Key handling (PATCH 4) ─────────────────────────────────────── #
+            # ── Key handling ──────────────────────────────────────────────── #
             key = cv2.waitKey(1) & 0xFF
             if key == 27:
                 if self.quiz_active:            # ESC first closes quiz
