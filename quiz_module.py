@@ -32,55 +32,81 @@ except ImportError:
 #  QUESTION BANK  (extend freely)
 # ─────────────────────────────────────────────────────────────────────────────
 DEFAULT_QUESTIONS = [
+    
     {
-        "q": "Which part of the brain is primarily responsible for vision?",
-        "opts": ["Frontal Lobe", "Temporal Lobe", "Occipital Lobe", "Cerebellum"],
-        "ans": 2,
-        "category": "Neuroscience"
+        "q": "How many eyes do most humans have?",
+        "opts": ["One", "Two", "Three", "Four"],
+        "ans": 1,
+        "category": "General"
     },
     {
-        "q": "What does EAR stand for in eye-tracking research?",
-        "opts": ["Eye Action Rate", "Eye Aspect Ratio", "Event Action Record", "Eye Area Radius"],
+        "q": "Which sense is related to the eyes?",
+        "opts": ["Hearing", "Smell", "Vision", "Taste"],
+        "ans": 2,
+        "category": "Biology"
+    },
+    {
+        "q": "What does a camera capture?",
+        "opts": ["Sound", "Light", "Heat", "Smell"],
+        "ans": 1,
+        "category": "Basics"
+    },
+    {
+        "q": "Eye tracking mainly follows which movement?",
+        "opts": ["Hand movement", "Eye movement", "Leg movement", "Voice movement"],
         "ans": 1,
         "category": "Eye Tracking"
     },
     {
-        "q": "Which technology does this tracker use for landmark detection?",
-        "opts": ["OpenPose", "Dlib", "MediaPipe", "TensorFlow Vision"],
+        "q": "Which device helps a computer see images?",
+        "opts": ["Keyboard", "Mouse", "Webcam", "Speaker"],
         "ans": 2,
-        "category": "Computer Vision"
+        "category": "Hardware"
     },
     {
-        "q": "A blink rate of how many per minute is considered normal?",
-        "opts": ["5–8 / min", "15–20 / min", "30–35 / min", "40–50 / min"],
+        "q": "Blinking helps to keep the eyes?",
+        "opts": ["Dry", "Clean and moist", "Closed forever", "Invisible"],
         "ans": 1,
         "category": "Physiology"
     },
     {
-        "q": "What does a HIGH attention score (≥70%) indicate?",
-        "opts": ["Drowsiness", "Distraction", "Focused engagement", "Random gaze"],
-        "ans": 2,
-        "category": "Attention"
+        "q": "Which color is made by combining Red, Green, and Blue?",
+        "opts": ["Black", "White", "Yellow", "Purple"],
+        "ans": 1,
+        "category": "Computer Vision"
     },
     {
-        "q": "Which metric measures how much the gaze position varies?",
-        "opts": ["Blink rate", "EAR threshold", "Gaze variance", "Head pitch"],
-        "ans": 2,
+        "q": "What does AI stand for?",
+        "opts": ["Automatic Input", "Artificial Intelligence", "Advanced Internet", "Auto Image"],
+        "ans": 1,
+        "category": "Technology"
+    },
+    {
+        "q": "Which part of the face contains the eyes?",
+        "opts": ["Hand", "Head", "Foot", "Back"],
+        "ans": 1,
+        "category": "General"
+    },
+    {
+        "q": "What happens when you blink?",
+        "opts": ["Eyes open wider", "Eyes close briefly", "Eyes change color", "Vision stops forever"],
+        "ans": 1,
         "category": "Eye Tracking"
     },
     {
-        "q": "What is the primary output file format for session logs?",
-        "opts": ["JSON", "XML", "CSV", "TXT"],
-        "ans": 2,
-        "category": "Software"
+        "q": "Which input device is used to type?",
+        "opts": ["Monitor", "Keyboard", "Camera", "Printer"],
+        "ans": 1,
+        "category": "Computer Basics"
     },
     {
-        "q": "Which colour channel is used by OpenCV by default?",
-        "opts": ["RGB", "HSV", "BGR", "YUV"],
-        "ans": 2,
-        "category": "Computer Vision"
-    },
+        "q": "What is used to move the cursor normally?",
+        "opts": ["Mouse", "Speaker", "Scanner", "Cable"],
+        "ans": 0,
+        "category": "Computer Basics"
+    }
 ]
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -145,7 +171,7 @@ class QuizModule:
         self.quiz.save_report()
     """
 
-    DWELL_TIME  = 1.5    # seconds to confirm a selection
+    DWELL_TIME  = 3   # seconds to confirm a selection
     RESULT_HOLD = 2.2    # seconds to show correct/wrong before next question
     ZONES       = 4      # always 4 answer options
 
