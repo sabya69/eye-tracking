@@ -100,21 +100,19 @@ class Launcher(tk.Tk):
         body.place(relx=0.5, rely=0.5, anchor="center")
 
         modules = [
-            ("👁  Eye Tracker",    "Calibrate & start gaze tracking",       ACCENT,  self._start_tracker),
-            ("📝  Notepad",        "Text editor  ·  save / open files",      GREEN,   lambda: NotepadWindow(self)),
-            ("🐍  Snake Game",     "Arrow keys or WASD to play",             AMBER,   lambda: GameWindow(self)),
-            ("⌨  Word Shortcuts", "Searchable MS Word keyboard shortcuts",  PURPLE,  lambda: ShortcutsWindow(self)),
+            ("👁  Eye Tracker", "Calibrate & start gaze tracking",  ACCENT, self._start_tracker),
+            ("📝  Notepad",     "Text editor  ·  save / open files", GREEN,  lambda: NotepadWindow(self)),
+            ("🐍  Snake Game",  "Arrow keys or WASD to play",        AMBER,  lambda: GameWindow(self)),
         ]
 
         for i, (name, desc, color, cmd) in enumerate(modules):
-            r, c = divmod(i, 2)
             _Card(body, name, desc, color, cmd).grid(
-                row=r, column=c, padx=20, pady=20, sticky="nsew")
+                row=0, column=i, padx=20, pady=20, sticky="nsew")
 
         body.grid_columnconfigure(0, weight=1)
         body.grid_columnconfigure(1, weight=1)
+        body.grid_columnconfigure(2, weight=1)
         body.grid_rowconfigure(0, weight=1)
-        body.grid_rowconfigure(1, weight=1)
 
         _sep(self)
 
@@ -239,6 +237,7 @@ class NotepadWindow(tk.Toplevel):
         self.configure(bg=SURFACE)
         self.state("zoomed")
         self._path = None
+        self._kb_win = None          # keep reference to keyboard window
         self._build()
         # ── Auto-open virtual keyboard on launch ──────────────────────────────
         self.after(300, self._open_keyboard)
@@ -333,17 +332,18 @@ class NotepadWindow(tk.Toplevel):
         self.bind("<Control-o>",       lambda e: self._open())
         self.bind("<Control-K>",       lambda e: self._open_keyboard())
 
-        # Keep reference to the keyboard window
-        self._kb_win = None
-
     # ── keyboard integration ──────────────────────────────────────────────────
     def _open_keyboard(self):
         """
-        Launch virtual_keyboard.py as a subprocess, or if it exposes a
-        Toplevel class, open it inline.  Falls back to the subprocess approach
-        so the code works even if virtual_keyboard is only a script.
+        Open the on-screen keyboard linked to this Notepad's text widget.
+        Priority order:
+          1. If already open → bring it to front.
+          2. Try to import virtual_keyboard.py inline (class-based).
+          3. Fall back to the built-in OnScreenKeyboard (always works).
+        The subprocess fallback has been removed because a subprocess has
+        no access to self._txt and typing would never reach the Notepad.
         """
-        # If a keyboard window is already open and alive, just raise it
+        # ── 1. Already open? Just raise it ───────────────────────────────────
         if self._kb_win is not None:
             try:
                 if self._kb_win.winfo_exists():
@@ -352,39 +352,30 @@ class NotepadWindow(tk.Toplevel):
                     return
             except Exception:
                 pass
+            self._kb_win = None   # window was destroyed; reset reference
 
-        # Try to import and open inline (preferred — text goes straight to _txt)
+        # ── 2. Try inline import of virtual_keyboard.py ───────────────────────
         try:
-            import importlib, virtual_keyboard as vkb
+            import importlib
+            import virtual_keyboard as vkb
             importlib.reload(vkb)
 
-            # Many virtual-keyboard implementations expose a class called
-            # VirtualKeyboard, KeyboardWindow, or similar.
             KbClass = None
             for name in ("VirtualKeyboard", "KeyboardWindow", "Keyboard"):
                 KbClass = getattr(vkb, name, None)
                 if KbClass:
                     break
 
-            if KbClass:
-                self._kb_win = KbClass(self, self._txt)   # pass text widget
+            if KbClass is not None:
+                self._kb_win = KbClass(self, self._txt)
                 self._kb_win.lift()
                 return
         except Exception:
-            pass
+            pass   # virtual_keyboard.py not found or has no matching class
 
-        # Fallback: open virtual_keyboard.py as a subprocess
-        kb_script = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "virtual_keyboard.py")
-        if os.path.exists(kb_script):
-            subprocess.Popen([sys.executable, kb_script])
-        else:
-            # Last resort: show the built-in on-screen keyboard panel
-            self._show_builtin_keyboard()
-
-    def _show_builtin_keyboard(self):
-        """Built-in fallback on-screen keyboard panel attached below the editor."""
-        OnScreenKeyboard(self, self._txt)
+        # ── 3. Built-in fallback — always works, always connected to _txt ─────
+        self._kb_win = OnScreenKeyboard(self, self._txt)
+        self._kb_win.lift()
 
     def insert_text(self, text):
         self._txt.insert("end", text)
@@ -670,8 +661,6 @@ class GameWindow(tk.Toplevel):
         self.focus_set()  # ensure keyboard input works
 
     def _steer(self,dx,dy):
-        if dy == 0 and dx == 0:
-            return  # centre button no-op
         if (dx,dy)!=(-self._dx,-self._dy):
             self._dx,self._dy=dx,dy
 
@@ -737,138 +726,6 @@ class GameWindow(tk.Toplevel):
         w=self.winfo_width(); h=self.winfo_height()
         sw=self.winfo_screenwidth(); sh=self.winfo_screenheight()
         self.geometry(f"+{(sw-w)//2}+{(sh-h)//2}")
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-#  WORD SHORTCUTS
-# ─────────────────────────────────────────────────────────────────────────────
-SHORTCUTS = {
-    "File": [
-        ("Ctrl + N","New document"),("Ctrl + O","Open document"),
-        ("Ctrl + S","Save"),("Ctrl + Shift + S","Save As"),
-        ("Ctrl + W","Close document"),("Ctrl + P","Print"),
-        ("Ctrl + Z","Undo"),("Ctrl + Y","Redo"),
-        ("F12","Save As dialog"),("Alt + F4","Close Word"),
-    ],
-    "Editing": [
-        ("Ctrl + C","Copy"),("Ctrl + X","Cut"),("Ctrl + V","Paste"),
-        ("Ctrl + A","Select All"),("Ctrl + F","Find"),
-        ("Ctrl + H","Find & Replace"),("Ctrl + G","Go To page"),
-        ("Delete","Delete next character"),("Backspace","Delete previous character"),
-        ("Ctrl + Delete","Delete next word"),("Ctrl + Backspace","Delete previous word"),
-    ],
-    "Formatting": [
-        ("Ctrl + B","Bold"),("Ctrl + I","Italic"),("Ctrl + U","Underline"),
-        ("Ctrl + E","Centre align"),("Ctrl + L","Left align"),
-        ("Ctrl + R","Right align"),("Ctrl + J","Justify"),
-        ("Ctrl + ]","Increase font size"),("Ctrl + [","Decrease font size"),
-        ("Ctrl + D","Font dialog"),("Ctrl + Shift + >","Larger font"),
-        ("Ctrl + Shift + <","Smaller font"),
-    ],
-    "Navigation": [
-        ("Ctrl + Home","Go to beginning"),("Ctrl + End","Go to end"),
-        ("Ctrl + →","Next word"),("Ctrl + ←","Previous word"),
-        ("Ctrl + ↑","Previous paragraph"),("Ctrl + ↓","Next paragraph"),
-        ("Page Up","Scroll up one page"),("Page Down","Scroll down one page"),
-    ],
-    "Selection": [
-        ("Shift + →/←","Select character by character"),
-        ("Ctrl + Shift + →","Select next word"),
-        ("Shift + Home","Select to line start"),
-        ("Shift + End","Select to line end"),
-        ("Ctrl + Shift + End","Select to document end"),
-        ("Ctrl + Shift + Home","Select to document start"),
-    ],
-    "Review & Misc": [
-        ("Ctrl + K","Insert hyperlink"),("Alt + Shift + D","Insert current date"),
-        ("Alt + Shift + T","Insert current time"),("F7","Spell check"),
-        ("Ctrl + Shift + E","Track changes"),("Ctrl + Alt + M","Insert comment"),
-        ("Ctrl + 1","Single line spacing"),("Ctrl + 2","Double line spacing"),
-        ("Ctrl + 5","1.5 line spacing"),
-    ],
-}
-
-SEC_COLOR = {
-    "File":ACCENT,"Editing":GREEN,"Formatting":AMBER,
-    "Navigation":PURPLE,"Selection":"#0891B2","Review & Misc":"#BE185D",
-}
-
-
-class ShortcutsWindow(tk.Toplevel):
-    def __init__(self, master):
-        super().__init__(master)
-        self.title("Word Shortcuts")
-        self.configure(bg=BG)
-        self.state("zoomed")
-        self._rows=[]
-        self._build()
-
-    def _build(self):
-        top = tk.Frame(self, bg=SURFACE, pady=14, padx=24)
-        top.pack(fill="x")
-        tk.Label(top, text="Search", bg=SURFACE, fg=MUTED, font=FB).pack(side="left")
-        self._q = tk.StringVar()
-        self._q.trace_add("write", lambda *_: self._filter())
-        e = tk.Entry(top, textvariable=self._q, bg=BG, fg=TEXT,
-                     insertbackground=ACCENT, relief="flat", font=FB, width=30)
-        e.pack(side="left", padx=12, ipady=5)
-        e.focus_set()
-        tk.Button(top, text="Clear", command=lambda: self._q.set(""),
-                  bg=SURFACE, fg=MUTED, activebackground=BG,
-                  relief="flat", font=FS, cursor="hand2").pack(side="left")
-        total = sum(len(v) for v in SHORTCUTS.values())
-        tk.Label(top, text=f"{total} shortcuts", bg=SURFACE, fg=MUTED,
-                 font=FS).pack(side="right")
-
-        _sep(self)
-
-        outer = tk.Frame(self, bg=BG)
-        outer.pack(fill="both", expand=True)
-        cv = tk.Canvas(outer, bg=BG, highlightthickness=0)
-        vsb = tk.Scrollbar(outer, orient="vertical", command=cv.yview,
-                           relief="flat", bg=BG, troughcolor=BG)
-        cv.configure(yscrollcommand=vsb.set)
-        vsb.pack(side="right", fill="y")
-        cv.pack(side="left", fill="both", expand=True)
-        self._inner = tk.Frame(cv, bg=BG)
-        win = cv.create_window((0,0), window=self._inner, anchor="nw")
-        self._inner.bind("<Configure>",
-            lambda e: cv.configure(scrollregion=cv.bbox("all")))
-        cv.bind("<Configure>",
-            lambda e: cv.itemconfig(win, width=e.width))
-        cv.bind_all("<MouseWheel>",
-            lambda e: cv.yview_scroll(-1*(e.delta//120),"units"))
-
-        for section, items in SHORTCUTS.items():
-            color = SEC_COLOR.get(section, ACCENT)
-            hdr = tk.Frame(self._inner, bg=BG)
-            hdr.pack(fill="x", padx=24, pady=(16,4))
-            tk.Frame(hdr, bg=color, width=4, height=18).pack(side="left")
-            tk.Label(hdr, text=f"  {section}", bg=BG, fg=color,
-                     font=("Segoe UI",11,"bold")).pack(side="left")
-
-            for key_str, desc in items:
-                row = tk.Frame(self._inner, bg=SURFACE)
-                row.pack(fill="x", padx=24, pady=2)
-                tk.Label(row, text=key_str, bg=SURFACE, fg=color,
-                         font=FM, width=22, anchor="w",
-                         padx=14, pady=8).pack(side="left")
-                tk.Frame(row, bg=SEP, width=1).pack(side="left",
-                                                     fill="y", pady=4)
-                tk.Label(row, text=desc, bg=SURFACE, fg=TEXT,
-                         font=FB, anchor="w", padx=16).pack(
-                             side="left", fill="x", expand=True)
-                self._rows.append((section, key_str, desc, row))
-
-        tk.Label(self._inner, bg=BG, height=1).pack()
-
-    def _filter(self):
-        q = self._q.get().lower().strip()
-        for section, key_str, desc, row in self._rows:
-            show = (not q or q in key_str.lower()
-                    or q in desc.lower() or q in section.lower())
-            if show: row.pack(fill="x", padx=24, pady=2)
-            else:    row.pack_forget()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
