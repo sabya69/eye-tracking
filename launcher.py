@@ -2,10 +2,6 @@
 GazeOS  —  Launcher  (Fullscreen Edition)
 ==========================================
 python launcher.py
-
-Requires in the same folder:
-  tracker.py · gaze_cursor.py · virtual_keyboard.py
-  text_pad.py · face_landmarker.task
 """
 
 import tkinter as tk
@@ -33,7 +29,7 @@ FT  = ("Segoe UI", 28, "bold")   # app title
 FM  = ("Consolas", 12)           # mono
 
 # ── auto-start cooldown (milliseconds) ───────────────────────────────────────
-AUTO_START_DELAY_MS = 0  # 15 seconds — change as needed
+AUTO_START_DELAY_MS = 0   # 15 seconds — change as needed
 
 
 def _sep(parent):

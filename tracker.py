@@ -61,6 +61,7 @@ class AttentionTracker:
 
         # ── Camera ────────────────────────────────────────────────────────── #
         self.cap = cv2.VideoCapture(0)
+        #self.cap = cv2.Videocapture(0)
         if not self.cap.isOpened():
             raise RuntimeError("Webcam not detected")
         fps = self.cap.get(cv2.CAP_PROP_FPS)

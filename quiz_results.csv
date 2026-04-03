@@ -1,1 +1,3 @@
 q_idx,question,category,selected,correct_ans,correct,react_time,fixation_A,fixation_B,fixation_C,fixation_D,hesitation
+0,How many eyes do most humans have?,General,3,1,False,1.22,0.0,0.0,0.0,0.9,0.0
+1,Which sense is related to the eyes?,Biology,2,2,True,8.58,0.0,0.0,3.05,0.3,0.3
