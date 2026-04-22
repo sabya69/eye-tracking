@@ -6,7 +6,7 @@ python launcher.py
 
 import tkinter as tk
 from tkinter import font as tkfont, filedialog
-import subprocess, sys, os, datetime, random
+import subprocess, sys, os, datetime, random, json
 
 # ── palette ───────────────────────────────────────────────────────────────────
 BG      = "#F5F6F8"
@@ -28,8 +28,8 @@ FS  = ("Segoe UI", 10)           # small / muted
 FT  = ("Segoe UI", 28, "bold")   # app title
 FM  = ("Consolas", 12)           # mono
 
-# ── auto-start cooldown (milliseconds) ───────────────────────────────────────
-AUTO_START_DELAY_MS = 0   # 15 seconds — change as needed
+# ── auto-start disabled ───────────────────────────────────────────────────────
+AUTO_START_DELAY_MS = 0
 
 
 def _sep(parent):
@@ -52,19 +52,9 @@ class Launcher(tk.Tk):
         self._build()
         self._tick()
 
-        # ── Auto-start eye tracker after cooldown ─────────────────────────────
-        self._countdown_val = AUTO_START_DELAY_MS // 1000
-        self._schedule_autostart()
+        # ── Status bar initial state ──────────────────────────────────────────
+        self._sv.set("  Ready. Click 'Eye Tracker' to begin.")
 
-    def _schedule_autostart(self):
-        """Show a countdown in the status bar, then auto-launch the tracker."""
-        if self._countdown_val > 0:
-            self._sv.set(f"  Eye Tracker starting in {self._countdown_val}s …")
-            self._countdown_val -= 1
-            self.after(1000, self._schedule_autostart)
-        else:
-            self._sv.set("  Auto-starting Eye Tracker …")
-            self.after(200, self._start_tracker)
 
     def _build(self):
         # ── header ────────────────────────────────────────────────────────────
@@ -80,6 +70,9 @@ class Launcher(tk.Tk):
 
         rf = tk.Frame(hdr, bg=SURFACE)
         rf.pack(side="right")
+        self._usage_v = tk.StringVar(value="Total Usage: 0h 0m")
+        tk.Label(rf, textvariable=self._usage_v,
+                 bg=SURFACE, fg=ACCENT, font=FM).pack(anchor="e")
         self._clock_v = tk.StringVar()
         tk.Label(rf, textvariable=self._clock_v,
                  bg=SURFACE, fg=MUTED, font=FM).pack(anchor="e")
@@ -95,19 +88,18 @@ class Launcher(tk.Tk):
         body = tk.Frame(wrapper, bg=BG)
         body.place(relx=0.5, rely=0.5, anchor="center")
 
-        modules = [
+        self.modules = [
             ("👁  Eye Tracker", "Calibrate & start gaze tracking",  ACCENT, self._start_tracker),
             ("📝  Notepad",     "Text editor  ·  save / open files", GREEN,  lambda: NotepadWindow(self)),
-            ("🐍  Snake Game",  "Arrow keys or WASD to play",        AMBER,  lambda: GameWindow(self)),
+            ("📊  Reports",     "View total usage & last session",   PURPLE, self._show_report),
         ]
 
-        for i, (name, desc, color, cmd) in enumerate(modules):
+        for i, (name, desc, color, cmd) in enumerate(self.modules):
             _Card(body, name, desc, color, cmd).grid(
                 row=0, column=i, padx=20, pady=20, sticky="nsew")
 
-        body.grid_columnconfigure(0, weight=1)
-        body.grid_columnconfigure(1, weight=1)
-        body.grid_columnconfigure(2, weight=1)
+        for i in range(len(self.modules)):
+            body.grid_columnconfigure(i, weight=1)
         body.grid_rowconfigure(0, weight=1)
 
         _sep(self)
@@ -130,6 +122,36 @@ class Launcher(tk.Tk):
             font=FB, cursor="hand2")
 
         self.bind("<Escape>", lambda e: self.destroy())
+        self._refresh_stats()
+
+    # ── stats & reports ───────────────────────────────────────────────────────
+    def _refresh_stats(self):
+        stats_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "usage_stats.json")
+        try:
+            if os.path.exists(stats_file):
+                with open(stats_file, "r") as f:
+                    stats = json.load(f)
+                sec = stats.get("total_seconds", 0)
+                self._usage_v.set(f"Total Usage: {int(sec//3600)}h {int((sec%3600)//60)}m")
+            else:
+                self._usage_v.set("Total Usage: 0h 0m")
+        except Exception:
+            pass
+
+    def _show_report(self):
+        report_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "session_report.png")
+        if os.path.exists(report_path):
+            try:
+                if sys.platform == "win32":
+                    os.startfile(report_path)
+                else:
+                    opener = "open" if sys.platform == "darwin" else "xdg-open"
+                    subprocess.call([opener, report_path])
+                self._sv.set("  Opening session report …")
+            except Exception as e:
+                self._sv.set(f"  Error opening report: {e}")
+        else:
+            self._sv.set("  No session report found. Run tracker first.")
 
     # ── tracker control ───────────────────────────────────────────────────────
     def _start_tracker(self):
@@ -162,6 +184,7 @@ class Launcher(tk.Tk):
             self._dot.config(fg=BORDER)
             self._sv.set("  Tracker finished")
             self._stop_btn.pack_forget()
+            self._refresh_stats()   # Update stats after session ends
         else:
             self.after(1000, self._poll)
 
@@ -539,189 +562,6 @@ class OnScreenKeyboard(tk.Toplevel):
 # ─────────────────────────────────────────────────────────────────────────────
 #  SNAKE GAME  — with on-screen D-pad so no physical keyboard needed
 # ─────────────────────────────────────────────────────────────────────────────
-class GameWindow(tk.Toplevel):
-    CELL=26; COLS=28; ROWS=22
-
-    def __init__(self, master):
-        super().__init__(master)
-        self.title("Snake")
-        self.configure(bg=BG)
-        self.resizable(False, False)
-        self._hi=0; self._aid=None
-        self._build(); self._center(); self._reset()
-
-    def _build(self):
-        W=self.COLS*self.CELL; H=self.ROWS*self.CELL
-
-        top = tk.Frame(self, bg=SURFACE, pady=12, padx=24)
-        top.pack(fill="x")
-        self._sv  = tk.StringVar(value="Score  0")
-        self._hiv = tk.StringVar(value="Best  0")
-        tk.Label(top, textvariable=self._sv,  bg=SURFACE, fg=TEXT,
-                 font=("Segoe UI",14,"bold")).pack(side="left")
-        tk.Label(top, textvariable=self._hiv, bg=SURFACE, fg=MUTED,
-                 font=("Segoe UI",14)).pack(side="right")
-
-        _sep(self)
-
-        # ── main area: canvas + d-pad side by side ────────────────────────────
-        main = tk.Frame(self, bg=BG)
-        main.pack(fill="both", expand=True)
-
-        self._cv = tk.Canvas(main, width=W, height=H, bg=SURFACE,
-                             highlightthickness=1, highlightbackground=BORDER)
-        self._cv.pack(side="left", padx=(16,8), pady=12)
-
-        # ── On-screen D-Pad ───────────────────────────────────────────────────
-        dpad_frame = tk.Frame(main, bg=BG)
-        dpad_frame.pack(side="left", padx=(8,16), pady=12, anchor="center")
-
-        # Title above d-pad
-        tk.Label(dpad_frame, text="Controls", bg=BG, fg=MUTED,
-                 font=("Segoe UI", 10, "bold")).pack(pady=(0,10))
-
-        self._start_btn = tk.Button(
-            dpad_frame, text="▶  Start / Restart",
-            command=self._start,
-            bg=GREEN, fg=SURFACE,
-            activebackground="#15803D", activeforeground=SURFACE,
-            relief="flat", bd=0, font=("Segoe UI",11,"bold"),
-            padx=16, pady=10, cursor="hand2")
-        self._start_btn.pack(fill="x", pady=(0,20))
-
-        tk.Label(dpad_frame, text="Direction", bg=BG, fg=MUTED,
-                 font=("Segoe UI", 9)).pack()
-
-        # D-Pad grid
-        dpad = tk.Frame(dpad_frame, bg=BG)
-        dpad.pack(pady=4)
-
-        def dpad_btn(parent, text, row, col, dx, dy):
-            b = tk.Button(
-                parent, text=text,
-                width=4, height=2,
-                font=("Segoe UI", 14, "bold"),
-                bg=SURFACE, fg=TEXT,
-                activebackground=ACCENT,
-                activeforeground=SURFACE,
-                relief="flat", bd=0,
-                highlightbackground=BORDER,
-                highlightthickness=1,
-                cursor="hand2",
-                command=lambda: self._steer(dx, dy))
-            b.grid(row=row, column=col, padx=3, pady=3)
-            return b
-
-        dpad_btn(dpad, "▲", 0, 1,  0, -1)   # Up
-        dpad_btn(dpad, "◀", 1, 0, -1,  0)   # Left
-        dpad_btn(dpad, "●", 1, 1,  0,  0)   # Centre (no-op)
-        dpad_btn(dpad, "▶", 1, 2,  1,  0)   # Right
-        dpad_btn(dpad, "▼", 2, 1,  0,  1)   # Down
-
-        # WASD labels beneath d-pad
-        tk.Label(dpad_frame, text="W A S D  ·  Arrow keys also work",
-                 bg=BG, fg=MUTED, font=("Segoe UI", 8)).pack(pady=(12,0))
-
-        # Speed display
-        self._speed_v = tk.StringVar(value="Speed: —")
-        tk.Label(dpad_frame, textvariable=self._speed_v,
-                 bg=BG, fg=MUTED, font=("Segoe UI", 9)).pack(pady=(8,0))
-
-        _sep(self)
-
-        tk.Label(self, text="Arrow keys / WASD  ·  Click canvas or Start button to play",
-                 bg=BG, fg=MUTED, font=FB).pack(pady=10)
-
-        # Key bindings
-        for key,d in [("<Up>",(0,-1)),("<Down>",(0,1)),
-                       ("<Left>",(-1,0)),("<Right>",(1,0)),
-                       ("<w>",(0,-1)),("<s>",(0,1)),
-                       ("<a>",(-1,0)),("<d>",(1,0))]:
-            self.bind(key, lambda e,dv=d: self._steer(*dv))
-        self._cv.bind("<Button-1>", lambda e: self._start())
-        self.focus_set()
-
-    def _reset(self):
-        cx,cy=self.COLS//2,self.ROWS//2
-        self._snake=[(cx,cy),(cx-1,cy),(cx-2,cy)]
-        self._dx=1; self._dy=0
-        self._score=0; self._alive=False
-        self._food=self._spawn()
-        self._sv.set("Score  0")
-        self._speed_v.set("Speed: —")
-        self._screen("Snake","Click Start or canvas to begin")
-
-    def _start(self):
-        if self._aid: self.after_cancel(self._aid)
-        self._reset(); self._alive=True; self._loop()
-        self.focus_set()  # ensure keyboard input works
-
-    def _steer(self,dx,dy):
-        if (dx,dy)!=(-self._dx,-self._dy):
-            self._dx,self._dy=dx,dy
-
-    def _spawn(self):
-        occ=set(self._snake)
-        while True:
-            p=(random.randint(0,self.COLS-1),random.randint(0,self.ROWS-1))
-            if p not in occ: return p
-
-    def _loop(self):
-        if not self._alive: return
-        hx,hy=self._snake[0]
-        nx,ny=hx+self._dx,hy+self._dy
-        if not(0<=nx<self.COLS and 0<=ny<self.ROWS) or (nx,ny) in self._snake:
-            self._alive=False
-            if self._score>self._hi:
-                self._hi=self._score
-                self._hiv.set(f"Best  {self._hi}")
-            self._screen("Game Over",f"Score: {self._score}  ·  Click Start to restart")
-            self._speed_v.set("Speed: —")
-            return
-        self._snake.insert(0,(nx,ny))
-        if (nx,ny)==self._food:
-            self._score+=10; self._sv.set(f"Score  {self._score}")
-            self._food=self._spawn()
-        else:
-            self._snake.pop()
-        # Update speed indicator
-        delay = max(60,130-self._score//5)
-        level = max(1, (130-delay)//10 + 1)
-        self._speed_v.set(f"Speed: {'▮'*min(level,10)}")
-        self._draw()
-        self._aid=self.after(delay,self._loop)
-
-    def _draw(self):
-        C=self.CELL
-        self._cv.delete("all")
-        W=self.COLS*C; H=self.ROWS*C
-        for x in range(0,W+1,C):
-            self._cv.create_line(x,0,x,H,fill=SEP)
-        for y in range(0,H+1,C):
-            self._cv.create_line(0,y,W,y,fill=SEP)
-        fx,fy=self._food; p=6
-        self._cv.create_oval(fx*C+p,fy*C+p,fx*C+C-p,fy*C+C-p,
-                             fill=DANGER,outline="")
-        for i,(x,y) in enumerate(self._snake):
-            fill=ACCENT if i==0 else "#3B82F6" if i<5 else "#93C5FD"
-            self._cv.create_rectangle(x*C+2,y*C+2,x*C+C-2,y*C+C-2,
-                                      fill=fill,outline=SURFACE,width=1)
-
-    def _screen(self,title,sub):
-        W=self.COLS*self.CELL; H=self.ROWS*self.CELL
-        self._cv.delete("all")
-        self._cv.create_rectangle(W//2-170,H//2-60,W//2+170,H//2+64,
-                                  fill=SURFACE,outline=BORDER,width=1)
-        self._cv.create_text(W//2,H//2-18,text=title,fill=TEXT,
-                             font=("Segoe UI",22,"bold"))
-        self._cv.create_text(W//2,H//2+20,text=sub,fill=MUTED,
-                             font=("Segoe UI",12))
-
-    def _center(self):
-        self.update_idletasks()
-        w=self.winfo_width(); h=self.winfo_height()
-        sw=self.winfo_screenwidth(); sh=self.winfo_screenheight()
-        self.geometry(f"+{(sw-w)//2}+{(sh-h)//2}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
