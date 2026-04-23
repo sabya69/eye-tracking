@@ -1,8 +1,3 @@
-"""
-GazeOS  —  Launcher  (Fullscreen Edition)
-==========================================
-python launcher.py
-"""
 
 import tkinter as tk
 from tkinter import font as tkfont, filedialog
@@ -156,7 +151,7 @@ class Launcher(tk.Tk):
     # ── tracker control ───────────────────────────────────────────────────────
     def _start_tracker(self):
         if self._proc and self._proc.poll() is None:
-            self._flash("Tracker is already running.")
+            self._flash("Tracker is already running...")
             return
         script = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                               "_run.py")
@@ -169,14 +164,15 @@ class Launcher(tk.Tk):
             [sys.executable, script],
             cwd=os.path.dirname(os.path.abspath(__file__)))
         self._dot.config(fg=GREEN)
-        self._sv.set("  Tracker running  —  K = keyboard   T = text pad   ESC = stop")
+        self._sv.set("  Tracker running  properly press —  K = keyboard   T = text pad   ESC = stop")
         self._stop_btn.pack(side="right")
         self._poll()
 
     def _stop(self):
         if self._proc: self._proc.terminate()
         self._dot.config(fg=BORDER)
-        self._sv.set("  Tracker stopped")
+        self._sv.set("  Tracker  is stopped")
+        self._refresh_stats()   # Update stats immediately after stopping
         self._stop_btn.pack_forget()
 
     def _poll(self):
@@ -353,15 +349,7 @@ class NotepadWindow(tk.Toplevel):
 
     # ── keyboard integration ──────────────────────────────────────────────────
     def _open_keyboard(self):
-        """
-        Open the on-screen keyboard linked to this Notepad's text widget.
-        Priority order:
-          1. If already open → bring it to front.
-          2. Try to import virtual_keyboard.py inline (class-based).
-          3. Fall back to the built-in OnScreenKeyboard (always works).
-        The subprocess fallback has been removed because a subprocess has
-        no access to self._txt and typing would never reach the Notepad.
-        """
+   
         # ── 1. Already open? Just raise it ───────────────────────────────────
         if self._kb_win is not None:
             try:
@@ -449,10 +437,7 @@ class NotepadWindow(tk.Toplevel):
 #  BUILT-IN ON-SCREEN KEYBOARD  (fallback when virtual_keyboard.py not found)
 # ─────────────────────────────────────────────────────────────────────────────
 class OnScreenKeyboard(tk.Toplevel):
-    """
-    A simple full QWERTY on-screen keyboard that types into a target
-    tk.Text widget.  Opens as a small always-on-top window.
-    """
+    
 
     ROWS = [
         ["`","1","2","3","4","5","6","7","8","9","0","-","=","⌫"],
@@ -492,25 +477,27 @@ class OnScreenKeyboard(tk.Toplevel):
             for key in row_keys:
                 w = self.WIDE.get(key, 1)
                 btn = tk.Button(
-                    row_frame,
-                    text=key,
-                    width=int(w * 3),
-                    font=("Segoe UI", 10),
-                    bg=SURFACE, fg=TEXT,
-                    activebackground=ACCENT,
-                    activeforeground=SURFACE,
-                    relief="flat",
-                    bd=0,
-                    highlightbackground=BORDER,
-                    highlightthickness=1,
-                    padx=4, pady=6,
-                    cursor="hand2",
-                    command=lambda k=key: self._press(k)
-                )
+                row_frame,
+                text=key,
+                width=int(w * 3),          # wider keys
+                height=1,                 # taller keys
+                font=("Segoe UI", 14, "bold"),   # bigger text
+                bg=SURFACE, fg=TEXT,
+                activebackground=ACCENT,
+                activeforeground=SURFACE,
+                relief="flat",
+                bd=0,
+                highlightbackground=BORDER,
+                highlightthickness=1,
+                padx=6,
+                pady=10,
+                cursor="hand2",
+                command=lambda k=key: self._press(k)
+)
                 btn.pack(side="left", padx=2)
 
         # Info label
-        tk.Label(pad, text="Click keys to type into Notepad",
+        tk.Label(pad, text="After Clicking the keys using tracker you can type in notepad",
                  bg=BG, fg=MUTED, font=FS).pack(pady=(6,0))
 
     def _press(self, key):
@@ -557,12 +544,6 @@ class OnScreenKeyboard(tk.Toplevel):
         w  = self.winfo_width()
         h  = self.winfo_height()
         self.geometry(f"+{(sw-w)//2}+{sh-h-60}")
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-#  SNAKE GAME  — with on-screen D-pad so no physical keyboard needed
-# ─────────────────────────────────────────────────────────────────────────────
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
