@@ -37,7 +37,9 @@ from text_pad         import TextPad
 
 class AttentionTracker:
 
-    def __init__(self):
+    def __init__(self, user_name=None):
+        self.user_name = user_name
+        self.csv_filename = f"{user_name}_gaze_log.csv" if user_name else "gaze_log.csv"
         # ── MediaPipe model ───────────────────────────────────────────────── #
         self.model_path = "face_landmarker.task"
         if not os.path.exists(self.model_path):
@@ -587,19 +589,19 @@ class AttentionTracker:
     #  CSV
     # =========================================================================
     def _save_csv(self):
-        with open("gaze_log.csv","w",newline="") as f:
+        with open(self.csv_filename,"w",newline="") as f:
             w = csv.writer(f)
             w.writerow(["timestamp","gaze_x","gaze_y","blink","gaze_dir",
                         "head_status","ear_left","ear_right"])
             w.writerows(self.log_rows)
-        print("[INFO] gaze_log.csv saved.")
+        print(f"[INFO] {self.csv_filename} saved.")
 
     # =========================================================================
     #  SESSION SUMMARY
     # =========================================================================
     def _session_summary(self):
         try:
-            data = pd.read_csv("gaze_log.csv")
+            data = pd.read_csv(self.csv_filename)
         except Exception:
             print("No session data."); return
         if data.empty: return
@@ -625,7 +627,7 @@ class AttentionTracker:
     # =========================================================================
     def _dashboard(self):
         try:
-            data = pd.read_csv("gaze_log.csv")
+            data = pd.read_csv(self.csv_filename)
         except Exception:
             return
         if len(data) < 5:
