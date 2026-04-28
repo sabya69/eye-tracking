@@ -138,6 +138,18 @@ class AttentionTracker:
     #  CALIBRATION
     # =========================================================================
     def calibrate(self, duration=3):
+        cv2.namedWindow("Attention Tracking System", cv2.WINDOW_NORMAL)
+        
+        # Cover a large portion of the screen (70%) without being full screen
+        win_w = int(self.screen_w * 0.5)
+        win_h = int(self.screen_h * 0.5)
+        cv2.resizeWindow("Attention Tracking System", win_w, win_h)
+        
+        # Center the window on the screen
+        x_pos = (self.screen_w - win_w) // 2
+        y_pos = (self.screen_h - win_h) // 2
+        cv2.moveWindow("Attention Tracking System", x_pos, y_pos)
+
         # ── Phase 1: EAR baseline ─────────────────────────────────────────── #
         print(f"[CAL] Phase 1: Eyes open for {duration}s …")
         l_ears, r_ears = [], []
