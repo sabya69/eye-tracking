@@ -80,7 +80,7 @@ class Launcher(tk.Tk):
         wrapper.pack(fill="both", expand=True)
 
         body = tk.Frame(wrapper, bg=BG)
-        body.place(relx=0.25, rely=0.5, anchor="center")
+        body.place(relx=0.18, rely=0.5, anchor="center")
 
         self.modules = [
             ("Eye Tracker", "Calibrate & start gaze tracking",  BG, self._start_tracker),
