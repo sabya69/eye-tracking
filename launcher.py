@@ -53,25 +53,25 @@ class Launcher(tk.Tk):
 
     def _build(self):
         # ── header ────────────────────────────────────────────────────────────
-        hdr = tk.Frame(self, bg=SURFACE, padx=48, pady=30)
+        hdr = tk.Frame(self, bg=BG, padx=48, pady=30)
         hdr.pack(fill="x")
 
-        lf = tk.Frame(hdr, bg=SURFACE)
+        lf = tk.Frame(hdr, bg=BG)
         lf.pack(side="left")
-        tk.Label(lf, text="", bg=SURFACE, fg=TEXT,
+        tk.Label(lf, text="", bg=BG, fg=TEXT,
                  font=FT).pack(anchor="w")
         
 
-        rf = tk.Frame(hdr, bg=SURFACE)
-        rf.pack(side="right")
+        rf = tk.Frame(hdr, bg=BG)
+        rf.pack(side="left")
         self._usage_v = tk.StringVar(value="Total Usage: 0h 0m")
         tk.Label(rf, textvariable=self._usage_v,
-                 bg=SURFACE, fg=ACCENT, font=FM).pack(anchor="e")
+                 bg=BG, fg=ACCENT, font=FM).pack(anchor="e")
         self._clock_v = tk.StringVar()
         tk.Label(rf, textvariable=self._clock_v,
-                 bg=SURFACE, fg=MUTED, font=FM).pack(anchor="e")
-        tk.Label(rf, text="Group 10  ·  Mini Project",
-                 bg=SURFACE, fg=MUTED, font=FS).pack(anchor="e")
+                 bg=BG, fg=MUTED, font=FM).pack(anchor="e")
+        tk.Label(rf, text="Group 10 ---  Mini Project",
+                 bg=BG, fg=MUTED, font=FS).pack(anchor="e")
 
         _sep(self)
 
@@ -99,19 +99,19 @@ class Launcher(tk.Tk):
         _sep(self)
 
         # ── status bar ────────────────────────────────────────────────────────
-        sb = tk.Frame(self, bg=SURFACE, padx=48, pady=14)
+        sb = tk.Frame(self, bg=BG, padx=48, pady=14)
         sb.pack(fill="x")
 
-        self._dot = tk.Label(sb, text="●", fg=BORDER, bg=SURFACE, font=FB)
+        self._dot = tk.Label(sb, text="●", fg=BORDER, bg=BG, font=FB)
         self._dot.pack(side="left")
 
         self._sv = tk.StringVar(value="  Initialising …")
-        tk.Label(sb, textvariable=self._sv, bg=SURFACE, fg=MUTED,
+        tk.Label(sb, textvariable=self._sv, bg=BG, fg=MUTED,
                  font=FB).pack(side="left")
 
         self._stop_btn = tk.Button(
             sb, text="Stop Tracker", command=self._stop,
-            bg=SURFACE, fg=DANGER, activebackground=BG,
+            bg=BG   , fg=DANGER, activebackground=BG,
             activeforeground=DANGER, relief="flat", bd=0,
             font=FB, cursor="hand2")
 
@@ -163,7 +163,7 @@ class Launcher(tk.Tk):
             [sys.executable, script],
             cwd=os.path.dirname(os.path.abspath(__file__)))
         self._dot.config(fg=GREEN)
-        self._sv.set("  Tracker running  properly press —  K = keyboard   T = text pad   ESC = stop")
+        self._sv.set("Tracker running  properly ESC = stop")
         self._stop_btn.pack(side="right")
         self._poll()
 
