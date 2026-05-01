@@ -80,20 +80,20 @@ class Launcher(tk.Tk):
         wrapper.pack(fill="both", expand=True)
 
         body = tk.Frame(wrapper, bg=BG)
-        body.place(relx=0.5, rely=0.5, anchor="center")
+        body.place(relx=0.25, rely=0.5, anchor="center")
 
         self.modules = [
-            ("  Eye Tracker", "Calibrate & start gaze tracking",  BG, self._start_tracker),
-            (" Notepad",     "Text editor  ·  save / open files", BG,  lambda: NotepadWindow(self)),
-            ("  Reports",     "View total usage & last session",   BG, self._show_report),
+            ("Eye Tracker", "Calibrate & start gaze tracking",  BG, self._start_tracker),
+            ("Notepad","Text editor  ·  save / open files", BG,  lambda: NotepadWindow(self)),
+            ("Reports","View total usage & last session",   BG, self._show_report),
         ]
 
         for i, (name, desc, color, cmd) in enumerate(self.modules):
             _Card(body, name, desc, color, cmd).grid(
-                row=0, column=i, padx=20, pady=20, sticky="nsew")
+                row=i, column=0, padx=20, pady=20, sticky="nsew")
 
         for i in range(len(self.modules)):
-            body.grid_columnconfigure(i, weight=1)
+            body.grid_columnconfigure(0, weight=1)
         body.grid_rowconfigure(0, weight=1)
 
         _sep(self)
@@ -170,7 +170,7 @@ class Launcher(tk.Tk):
     def _stop(self):
         if self._proc: self._proc.terminate()
         self._dot.config(fg=BORDER)
-        self._sv.set("  Tracker  is stopped")
+        self._sv.set("  Tracker is stopped")
         self._refresh_stats()   # Update stats immediately after stopping
         self._stop_btn.pack_forget()
 
