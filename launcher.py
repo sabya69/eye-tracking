@@ -37,7 +37,7 @@ def _sep(parent):
 class Launcher(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("GazeOS")
+        
         self.configure(bg=BG)
 
         # ── Fullscreen ────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ class Launcher(tk.Tk):
         self._tick()
 
         # ── Status bar initial state ──────────────────────────────────────────
-        self._sv.set("  Ready. Click 'Eye Tracker' to begin.")
+        self._sv.set("Click to start the tracker")
 
 
     def _build(self):
@@ -58,10 +58,9 @@ class Launcher(tk.Tk):
 
         lf = tk.Frame(hdr, bg=SURFACE)
         lf.pack(side="left")
-        tk.Label(lf, text="GazeOS", bg=SURFACE, fg=TEXT,
+        tk.Label(lf, text="", bg=SURFACE, fg=TEXT,
                  font=FT).pack(anchor="w")
-        tk.Label(lf, text="Eye-Tracker  ·  Assistive Technology Platform",
-                 bg=SURFACE, fg=MUTED, font=FS).pack(anchor="w")
+        
 
         rf = tk.Frame(hdr, bg=SURFACE)
         rf.pack(side="right")
@@ -84,9 +83,9 @@ class Launcher(tk.Tk):
         body.place(relx=0.5, rely=0.5, anchor="center")
 
         self.modules = [
-            ("👁  Eye Tracker", "Calibrate & start gaze tracking",  ACCENT, self._start_tracker),
-            ("📝  Notepad",     "Text editor  ·  save / open files", GREEN,  lambda: NotepadWindow(self)),
-            ("📊  Reports",     "View total usage & last session",   PURPLE, self._show_report),
+            ("  Eye Tracker", "Calibrate & start gaze tracking",  BG, self._start_tracker),
+            (" Notepad",     "Text editor  ·  save / open files", BG,  lambda: NotepadWindow(self)),
+            ("  Reports",     "View total usage & last session",   BG, self._show_report),
         ]
 
         for i, (name, desc, color, cmd) in enumerate(self.modules):
@@ -301,7 +300,7 @@ class NotepadWindow(tk.Toplevel):
         tbtn("Save",    self._save,    fg=ACCENT, bold=True)
         tbtn("Save As", self._save_as, fg=ACCENT)
         # ── Keyboard toggle button in toolbar ─────────────────────────────────
-        tbtn("⌨ Keyboard", self._open_keyboard, fg=PURPLE, bold=True)
+        tbtn(" Keyboard", self._open_keyboard, fg=PURPLE, bold=True)
 
         tk.Label(tb, text="|", bg=SURFACE, fg=BORDER, font=FB).pack(side="left", padx=8)
         tk.Label(tb, text="Size", bg=SURFACE, fg=MUTED, font=FS).pack(side="left")
