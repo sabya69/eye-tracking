@@ -37,22 +37,22 @@ def _sep(parent):
 class Launcher(tk.Tk):
     def __init__(self):
         super().__init__()
+        self.attributes('-alpha', 0.0)  # Make completely transparent to prevent flashing
+        self.withdraw()  # Hide UI initially
         
         self.configure(bg=BG)
 
         # ── Fullscreen ────────────────────────────────────────────────────────
-        self.state("zoomed")          # Windows: maximized (keeps title bar)
         self.resizable(True, True)
         self._proc = None
         self._build()
         self._tick()
 
         # ── Status bar initial state ──────────────────────────────────────────
-        self._sv.set("Tracker will start soon.....")
+        self._sv.set("Tracker starting...")
         
-        # ── Auto-start timer ──────────────────────────────────────────────────
-        self._countdown = 5
-        self._auto_start_timer()
+        # ── Auto-start tracker immediately ─────────────────────────────────────
+        self.after(100, self._start_tracker)
 
 
     def _build(self):
@@ -125,19 +125,6 @@ class Launcher(tk.Tk):
         self.bind("<Escape>", lambda e: self.destroy())
         self._refresh_stats()
 
-    def _auto_start_timer(self):
-        if self._proc and self._proc.poll() is None:
-            self.cards[0]._nl.configure(text="Eye Tracker")
-            return
-            
-        if self._countdown > 0:
-            self.cards[0]._nl.configure(text=f"Eye Tracker (Starts in {self._countdown}s)")
-            self._countdown -= 1
-            self.after(1000, self._auto_start_timer)
-        else:
-            self.cards[0]._nl.configure(text="Eye Tracker")
-            self._start_tracker()
-
     # ── stats & reports ───────────────────────────────────────────────────────
     def _refresh_stats(self):
         stats_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "usage_stats.json")
@@ -172,20 +159,64 @@ class Launcher(tk.Tk):
         if self._proc and self._proc.poll() is None:
             self._flash("Tracker is already running...")
             return
+            
+        self.withdraw()  # Hide UI during calibration
+        
         script = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                               "_run.py")
+        flag_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "calib_done.flag")
+        
+        if os.path.exists(flag_file):
+            try: os.remove(flag_file)
+            except: pass
+
         with open(script, "w") as f:
             f.write("from tracker import AttentionTracker\n"
+                    "import os\n"
                     "t = AttentionTracker()\n"
                     "t.calibrate(duration=3)\n"
+                    "with open('calib_done.flag', 'w') as flag: flag.write('1')\n"
                     "t.run()\n")
+                    
+        startupinfo = None
+        if os.name == 'nt':
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
         self._proc = subprocess.Popen(
             [sys.executable, script],
-            cwd=os.path.dirname(os.path.abspath(__file__)))
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+            startupinfo=startupinfo)
         self._dot.config(fg=GREEN)
         self._sv.set("Tracker running  properly ESC = stop")
         self._stop_btn.pack(side="right")
         self._poll()
+        self._wait_for_calibration()
+
+    def _restore_ui(self):
+        self.attributes('-alpha', 1.0)
+        self.deiconify()
+        self.state("zoomed")
+        self.lift()
+        self.attributes('-topmost', True)
+        self.after(100, lambda: self.attributes('-topmost', False))
+        self.focus_force()
+
+    def _wait_for_calibration(self):
+        flag_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "calib_done.flag")
+        # Check if tracker process ended prematurely
+        if self._proc and self._proc.poll() is not None:
+            self._restore_ui()
+            return
+
+        if os.path.exists(flag_file):
+            try:
+                os.remove(flag_file)
+            except:
+                pass
+            self._restore_ui()
+        else:
+            self.after(500, self._wait_for_calibration)
 
     def _stop(self):
         if self._proc: self._proc.terminate()
