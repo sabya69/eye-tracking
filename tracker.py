@@ -239,6 +239,13 @@ class AttentionTracker:
         else:
             print("[CAL] Not enough gaze data -- using defaults")
 
+        import sys
+        if sys.platform == "win32":
+            import ctypes
+            hwnd = ctypes.windll.user32.FindWindowW(None, WIN)
+            if hwnd:
+                ctypes.windll.user32.ShowWindow(hwnd, 6) # SW_MINIMIZE
+
     # =========================================================================
     #  HELPERS
     # =========================================================================

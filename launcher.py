@@ -341,16 +341,22 @@ class NotepadWindow(tk.Toplevel):
         frame = tk.Frame(self, bg=SURFACE)
         frame.pack(fill="both", expand=True)
 
+        text_wrapper = tk.Frame(frame, bg=SURFACE)
+        text_wrapper.place(relx=0, rely=0, relwidth=1, relheight=0.33)
+
+        self.kb_wrapper = tk.Frame(frame, bg=BG)
+        self.kb_wrapper.place(relx=0, rely=0.33, relwidth=1, relheight=0.67)
+
         self._tfont = tkfont.Font(family="Consolas", size=13)
         self._txt = tk.Text(
-            frame, bg=SURFACE, fg=TEXT,
+            text_wrapper, bg=SURFACE, fg=TEXT,
             insertbackground=ACCENT,
             selectbackground="#BFDBFE", selectforeground=TEXT,
             font=self._tfont, wrap="word", undo=True,
             padx=32, pady=20, relief="flat", bd=0,
             spacing1=3, spacing3=3)
 
-        vsb = tk.Scrollbar(frame, command=self._txt.yview,
+        vsb = tk.Scrollbar(text_wrapper, command=self._txt.yview,
                            relief="flat", bg=BG, troughcolor=BG)
         self._txt.configure(yscrollcommand=vsb.set)
         vsb.pack(side="right", fill="y")
@@ -365,21 +371,17 @@ class NotepadWindow(tk.Toplevel):
 
     # ── keyboard integration ──────────────────────────────────────────────────
     def _open_keyboard(self, layout="normal"):
-        # ── 1. Already open? Just raise it ───────────────────────────────────
-        if self._kb_win is not None:
+        if hasattr(self, '_kb_win') and self._kb_win is not None:
             try:
                 if self._kb_win.winfo_exists():
                     self._kb_win.set_layout(layout)
-                    self._kb_win.lift()
-                    self._kb_win.focus_force()
                     return
             except Exception:
                 pass
-            self._kb_win = None   # window was destroyed; reset reference
+            self._kb_win = None
 
-        # ── Use built-in fallback — always works, always connected to _txt ─────
-        self._kb_win = OnScreenKeyboard(self, self._txt, layout=layout)
-        self._kb_win.lift()
+        self._kb_win = OnScreenKeyboard(self.kb_wrapper, self._txt, layout=layout, notepad_app=self)
+        self._kb_win.pack(fill="both", expand=True)
 
     def insert_text(self, text):
         self._txt.insert("end", text)
@@ -404,10 +406,13 @@ class NotepadWindow(tk.Toplevel):
         self._update_sv()
 
     def _save(self):
-        if not self._path: self._save_as(); return
+        if not self._path:
+            ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            self._path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"typed_text_{ts}.txt")
         with open(self._path,"w",encoding="utf-8") as f:
             f.write(self._txt.get("1.0","end").rstrip())
         self._sv.set(f"Saved  —  {os.path.basename(self._path)}")
+        self.title(f"Notepad  —  {os.path.basename(self._path)}")
 
     def _save_as(self):
         ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -433,9 +438,7 @@ class NotepadWindow(tk.Toplevel):
 # ─────────────────────────────────────────────────────────────────────────────
 #  BUILT-IN ON-SCREEN KEYBOARD  (fallback when virtual_keyboard.py not found)
 # ─────────────────────────────────────────────────────────────────────────────
-class OnScreenKeyboard(tk.Toplevel):
-    
-
+class OnScreenKeyboard(tk.Frame):
     LAYOUTS = {
         "normal": [
             ["1","2","3","4","5","6","7","8","9","0","-","⌫"],
@@ -469,19 +472,15 @@ class OnScreenKeyboard(tk.Toplevel):
     WIDE = {"⌫":2,"Tab":1.5,"Caps":1.8,"Enter":2,"Shift":2.3,"Space":6,"Ctrl":1.5,"Alt":1.5}
 
 
-    def __init__(self, master, target: tk.Text, layout="normal"):
-        super().__init__(master)
-        self.title("On-Screen Keyboard")
-        self.configure(bg=BG)
-        self.resizable(False, False)
-        self.attributes("-topmost", True)
+    def __init__(self, master, target: tk.Text, layout="normal", notepad_app=None):
+        super().__init__(master, bg=BG)
         self._target = target
+        self.notepad_app = notepad_app
         self._shift  = False
         self._caps   = False
         self._layout = layout
         self.ROWS = self.LAYOUTS.get(self._layout, self.LAYOUTS["normal"])
         self._build()
-        self._center()
 
     def set_layout(self, layout):
         if layout in self.LAYOUTS and layout != self._layout:
@@ -493,36 +492,39 @@ class OnScreenKeyboard(tk.Toplevel):
 
     def _build(self):
         pad = tk.Frame(self, bg=BG, padx=8, pady=8)
-        pad.pack()
+        pad.pack(fill="both", expand=True)
 
-        for row_keys in self.ROWS:
+        for r, row_keys in enumerate(self.ROWS):
+            pad.rowconfigure(r, weight=1)
             row_frame = tk.Frame(pad, bg=BG)
-            row_frame.pack(pady=3)
-            for key in row_keys:
+            row_frame.grid(row=r, column=0, sticky="nsew", pady=4)
+            
+            for c, key in enumerate(row_keys):
                 w = self.WIDE.get(key, 1)
+                row_frame.columnconfigure(c, weight=int(w * 10))
+                
                 btn = tk.Button(
-                row_frame,
-                text=key,
-                width=int(w * 4.2),          # wider keys
-                height=2,                 # taller keys
-                font=("Segoe UI", 14, "bold"),   # bigger text
-                bg=SURFACE, fg=TEXT,
-                activebackground=ACCENT,
-                activeforeground=SURFACE,
-                relief="flat",
-                bd=0,
-                highlightbackground=BORDER,
-                highlightthickness=1,
-                padx=6,
-                pady=10,
-                cursor="hand2",
-                command=lambda k=key: self._press(k)
-)
-                btn.pack(side="left", padx=2)
+                    row_frame,
+                    text=key,
+                    font=("Segoe UI", 16, "bold"),
+                    bg=SURFACE, fg=TEXT,
+                    activebackground=ACCENT,
+                    activeforeground=SURFACE,
+                    relief="flat",
+                    bd=0,
+                    highlightbackground=BORDER,
+                    highlightthickness=1,
+                    cursor="hand2",
+                    command=lambda k=key: self._press(k)
+                )
+                btn.grid(row=0, column=c, sticky="nsew", padx=4)
+            row_frame.rowconfigure(0, weight=1)
 
         # Info label
+        pad.rowconfigure(len(self.ROWS), weight=0)
+        pad.columnconfigure(0, weight=1)
         tk.Label(pad, text="After Clicking the keys using tracker you can type in notepad",
-                 bg=BG, fg=MUTED, font=FS).pack(pady=(6,0))
+                 bg=BG, fg=MUTED, font=FS).grid(row=len(self.ROWS), column=0, pady=(10,0))
 
     def _press(self, key):
         t = self._target
@@ -536,7 +538,10 @@ class OnScreenKeyboard(tk.Toplevel):
         elif key == "Caps":
             self._caps = not self._caps
         elif key == "Enter":
-            t.insert("insert", "\n")
+            if getattr(self, 'notepad_app', None):
+                self.notepad_app._save()
+            else:
+                t.insert("insert", "\n")
         elif key == "Tab":
             t.insert("insert", "\t")
         elif key == "Space":
@@ -560,14 +565,6 @@ class OnScreenKeyboard(tk.Toplevel):
                 self._shift = False
         t.see("insert")
         t.focus_set()
-
-    def _center(self):
-        self.update_idletasks()
-        sw = self.winfo_screenwidth()
-        sh = self.winfo_screenheight()
-        w  = self.winfo_width()
-        h  = self.winfo_height()
-        self.geometry(f"+{(sw-w)//2}+{sh-h-60}")
 
 # ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
