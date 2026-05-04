@@ -48,7 +48,7 @@ class Launcher(tk.Tk):
         self._tick()
 
         # ── Status bar initial state ──────────────────────────────────────────
-        self._sv.set("Click to start the tracker")
+        self._sv.set("Tracker will start soon.....")
         
         # ── Auto-start timer ──────────────────────────────────────────────────
         self._countdown = 5
@@ -88,9 +88,10 @@ class Launcher(tk.Tk):
 
         self.modules = [
             ("Eye Tracker", "Calibrate & start gaze tracking",  GREEN, self._start_tracker),
-            ("Notepad","Text editor  ·  save / open files", GREEN,  lambda: NotepadWindow(self)),
-            ("Reports","View total usage & last session",   GREEN, self._show_report),
+            ("Notepad","Text editor  ·  save / open files", AMBER,  lambda: NotepadWindow(self)),
+            
         ]
+        
  
         self.cards = []
         for i, (name, desc, color, cmd) in enumerate(self.modules):
@@ -314,8 +315,8 @@ class NotepadWindow(tk.Toplevel):
                           cursor="hand2")
             b.pack(side="left", padx=2)
 
-        tbtn("New",     self._new)
-        tbtn("Open",    self._open)
+        
+        tbtn("Cluster Keyboard", self._cluster_open_keyboard, fg=PURPLE, bold=True)
         tbtn("Save",    self._save,    fg=ACCENT, bold=True)
         tbtn("Save As", self._save_as, fg=ACCENT)
         # ── Keyboard toggle button in toolbar ─────────────────────────────────
@@ -459,9 +460,9 @@ class OnScreenKeyboard(tk.Toplevel):
 
     ROWS = [
         ["1","2","3","4","5","6","7","8","9","0","-","⌫"],
-        ["q","w","e","r","t","y","u","i","o","p","[","]","\\"],
-        ["a","s","d","f","g","h","j","k","l",";","'","Enter"],
-        ["z","x","c","v","b","n","m",",","."],
+        ["Q","W","E","R","T","Y","U","I","O","P","[","]","\\"],
+        ["A","S","D","F","G","H","J","K","L",";","'","Enter"],
+        ["Z","X","C","V","B","N","M",",","."],
         ["Space"],
     ]
 
@@ -472,6 +473,7 @@ class OnScreenKeyboard(tk.Toplevel):
     }
 
     WIDE = {"⌫":2,"Tab":1.5,"Caps":1.8,"Enter":2,"Shift":2.3,"Space":6,"Ctrl":1.5,"Alt":1.5}
+
 
     def __init__(self, master, target: tk.Text):
         super().__init__(master)
@@ -497,8 +499,8 @@ class OnScreenKeyboard(tk.Toplevel):
                 btn = tk.Button(
                 row_frame,
                 text=key,
-                width=int(w * 3),          # wider keys
-                height=1,                 # taller keys
+                width=int(w * 4.2),          # wider keys
+                height=2,                 # taller keys
                 font=("Segoe UI", 14, "bold"),   # bigger text
                 bg=SURFACE, fg=TEXT,
                 activebackground=ACCENT,
