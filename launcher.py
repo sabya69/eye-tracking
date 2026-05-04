@@ -24,7 +24,7 @@ FT  = ("Segoe UI", 28, "bold")   # app title
 FM  = ("Consolas", 12)           # mono
 
 # ── auto-start disabled ───────────────────────────────────────────────────────
-AUTO_START_DELAY_MS = 0
+AUTO_START_DELAY_MS = 1500
 
 
 def _sep(parent):
@@ -49,6 +49,10 @@ class Launcher(tk.Tk):
 
         # ── Status bar initial state ──────────────────────────────────────────
         self._sv.set("Click to start the tracker")
+        
+        # ── Auto-start timer ──────────────────────────────────────────────────
+        self._countdown = 5
+        self._auto_start_timer()
 
 
     def _build(self):
@@ -87,10 +91,12 @@ class Launcher(tk.Tk):
             ("Notepad","Text editor  ·  save / open files", GREEN,  lambda: NotepadWindow(self)),
             ("Reports","View total usage & last session",   GREEN, self._show_report),
         ]
-
+ 
+        self.cards = []
         for i, (name, desc, color, cmd) in enumerate(self.modules):
-            _Card(body, name, desc, color, cmd).grid(
-                row=i, column=0, padx=20, pady=20, sticky="nsew")
+            card = _Card(body, name, desc, color, cmd)
+            card.grid(row=i, column=0, padx=20, pady=20, sticky="nsew")
+            self.cards.append(card)
 
         for i in range(len(self.modules)):
             body.grid_columnconfigure(0, weight=1)
@@ -117,6 +123,19 @@ class Launcher(tk.Tk):
 
         self.bind("<Escape>", lambda e: self.destroy())
         self._refresh_stats()
+
+    def _auto_start_timer(self):
+        if self._proc and self._proc.poll() is None:
+            self.cards[0]._nl.configure(text="Eye Tracker")
+            return
+            
+        if self._countdown > 0:
+            self.cards[0]._nl.configure(text=f"Eye Tracker (Starts in {self._countdown}s)")
+            self._countdown -= 1
+            self.after(1000, self._auto_start_timer)
+        else:
+            self.cards[0]._nl.configure(text="Eye Tracker")
+            self._start_tracker()
 
     # ── stats & reports ───────────────────────────────────────────────────────
     def _refresh_stats(self):
