@@ -83,9 +83,9 @@ class Launcher(tk.Tk):
         body.place(relx=0.18, rely=0.5, anchor="center")
 
         self.modules = [
-            ("Eye Tracker", "Calibrate & start gaze tracking",  BG, self._start_tracker),
-            ("Notepad","Text editor  ·  save / open files", BG,  lambda: NotepadWindow(self)),
-            ("Reports","View total usage & last session",   BG, self._show_report),
+            ("Eye Tracker", "Calibrate & start gaze tracking",  GREEN, self._start_tracker),
+            ("Notepad","Text editor  ·  save / open files", GREEN,  lambda: NotepadWindow(self)),
+            ("Reports","View total usage & last session",   GREEN, self._show_report),
         ]
 
         for i, (name, desc, color, cmd) in enumerate(self.modules):
@@ -439,11 +439,11 @@ class OnScreenKeyboard(tk.Toplevel):
     
 
     ROWS = [
-        ["`","1","2","3","4","5","6","7","8","9","0","-","=","⌫"],
-        ["Tab","q","w","e","r","t","y","u","i","o","p","[","]","\\"],
-        ["Caps","a","s","d","f","g","h","j","k","l",";","'","Enter"],
-        ["Shift","z","x","c","v","b","n","m",",",".","/","Shift"],
-        ["Ctrl","Alt","Space","Alt","Ctrl"],
+        ["1","2","3","4","5","6","7","8","9","0","-","⌫"],
+        ["q","w","e","r","t","y","u","i","o","p","[","]","\\"],
+        ["a","s","d","f","g","h","j","k","l",";","'","Enter"],
+        ["z","x","c","v","b","n","m",",","."],
+        ["Space"],
     ]
 
     SHIFT_MAP = {
