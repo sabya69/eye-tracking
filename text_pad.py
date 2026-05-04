@@ -19,7 +19,7 @@ class TextPad:
     # (display label, action key, button color BGR)
     BUTTONS = [
         ("ALPHA KB",    "alpha",   (0, 110, 180)),
-        ("NORMAL KB",   "normal",  (120, 55, 0)),
+        ("QWERTY KB",   "normal",  (120, 55, 0)),
         ("CLUSTER KB",  "cluster", (60, 0, 100)),
     ]
 
