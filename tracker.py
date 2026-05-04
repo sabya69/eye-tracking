@@ -124,6 +124,7 @@ class AttentionTracker:
         self.vkb         = VirtualKeyboard()
         self.pad         = TextPad()
         self.vkb.link_textpad(self.pad)   # ENTER on keyboard -> TextPad
+        self.pad.link_keyboard(self.vkb)  # Buttons on TextPad -> Keyboard
         self.quiz        = QuizModule()    # <- V2 addition
         self.quiz_active = False           # <- V2 addition
 

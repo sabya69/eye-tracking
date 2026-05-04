@@ -14,12 +14,26 @@ class VirtualKeyboard:
     DWELL_TIME = 1.2
     KEY_W = 72;  KEY_H = 60;  KEY_GAP = 6;  MARGIN = 18;  TEXT_H = 52
 
-    ROWS = [
-        list("QWERTYUIOP"),
-        list("ASDFGHJKL"),
-        list("ZXCVBNM") + ["←"],
-        ["SPACE", "ENTER", "CLEAR", "CLOSE"],
-    ]
+    LAYOUTS = {
+        "normal": [
+            list("QWERTYUIOP"),
+            list("ASDFGHJKL"),
+            list("ZXCVBNM") + ["←"],
+            ["SPACE", "ENTER", "CLEAR", "CLOSE"],
+        ],
+        "alpha": [
+            list("ABCDEFGHIJ"),
+            list("KLMNOPQRST"),
+            list("UVWXYZ") + ["←"],
+            ["SPACE", "ENTER", "CLEAR", "CLOSE"],
+        ],
+        "cluster": [
+            list("EAIOU") + list("SRHDLU"),
+            list("CMWFY") + list("GPBVKX"),
+            list("JQZNT") + ["←"],
+            ["SPACE", "ENTER", "CLEAR", "CLOSE"],
+]
+    }
 
     def __init__(self):
         self.visible        = False
@@ -30,7 +44,12 @@ class VirtualKeyboard:
         self.last_pressed   = None
         self.last_press_t   = 0.0
         self._textpad       = None   # set via link_textpad()
-        self._build_layout()
+        self.set_layout("normal")
+
+    def set_layout(self, layout_name):
+        if layout_name in self.LAYOUTS:
+            self.ROWS = self.LAYOUTS[layout_name]
+            self._build_layout()
 
     # ── geometry ─────────────────────────────────────────────────────────────
     def _kw(self, label):

@@ -18,9 +18,9 @@ class TextPad:
 
     # (display label, action key, button color BGR)
     BUTTONS = [
-        ("SAVE TO .TXT", "save",  (0, 110, 180)),
-        ("CLEAR ALL",    "clear", (120, 55, 0)),
-        ("CLOSE PAD",    "close", (60, 0, 100)),
+        ("ALPHA KB",    "alpha",   (0, 110, 180)),
+        ("NORMAL KB",   "normal",  (120, 55, 0)),
+        ("CLUSTER KB",  "cluster", (60, 0, 100)),
     ]
 
     def __init__(self):
@@ -34,6 +34,7 @@ class TextPad:
         self._flash_t     = 0.0
         self._cooldown    = 1.5
         self._gaze_dot    = None   # (x, y) in pad-window pixels, drawn as indicator
+        self._vkb         = None
 
         # pre-compute button rects  (action, x1, y1, x2, y2)
         total_w = self.PAD_W - 2*self.MARGIN
@@ -56,6 +57,10 @@ class TextPad:
         return x1, y1, x2, y2
 
     # ── public API ────────────────────────────────────────────────────────────
+    def link_keyboard(self, vkb):
+        """Connect VirtualKeyboard to control layouts."""
+        self._vkb = vkb
+
     def toggle(self):
         self.visible = not self.visible
         if not self.visible:
@@ -119,7 +124,12 @@ class TextPad:
         return None
 
     def _do(self, action: str):
-        if   action == "save":  self._save()
+        if action in ("alpha", "normal", "cluster"):
+            if self._vkb is not None:
+                self._vkb.set_layout(action)
+                self._vkb.visible = True
+                self._flash(f"Opened {action} layout!")
+        elif action == "save":  self._save()
         elif action == "clear":
             self.buffer = ""
             self._flash("Cleared!")

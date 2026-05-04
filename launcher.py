@@ -315,12 +315,9 @@ class NotepadWindow(tk.Toplevel):
                           cursor="hand2")
             b.pack(side="left", padx=2)
 
-        
-        tbtn("Cluster Keyboard", self._cluster_open_keyboard, fg=PURPLE, bold=True)
-        tbtn("Save",    self._save,    fg=ACCENT, bold=True)
-        tbtn("Save As", self._save_as, fg=ACCENT)
-        # ── Keyboard toggle button in toolbar ─────────────────────────────────
-        tbtn(" Keyboard", self._open_keyboard, fg=PURPLE, bold=True)
+        tbtn("Alphabetical Keyboard", lambda: self._open_keyboard("alpha"), fg=PURPLE, bold=True)
+        tbtn("Normal Keyboard", lambda: self._open_keyboard("normal"), fg=PURPLE, bold=True)
+        tbtn("Cluster Keyboard", lambda: self._open_keyboard("cluster"), fg=PURPLE, bold=True)
 
         tk.Label(tb, text="|", bg=SURFACE, fg=BORDER, font=FB).pack(side="left", padx=8)
         tk.Label(tb, text="Size", bg=SURFACE, fg=MUTED, font=FS).pack(side="left")
@@ -367,12 +364,12 @@ class NotepadWindow(tk.Toplevel):
         self.bind("<Control-K>",       lambda e: self._open_keyboard())
 
     # ── keyboard integration ──────────────────────────────────────────────────
-    def _open_keyboard(self):
-   
+    def _open_keyboard(self, layout="normal"):
         # ── 1. Already open? Just raise it ───────────────────────────────────
         if self._kb_win is not None:
             try:
                 if self._kb_win.winfo_exists():
+                    self._kb_win.set_layout(layout)
                     self._kb_win.lift()
                     self._kb_win.focus_force()
                     return
@@ -380,27 +377,8 @@ class NotepadWindow(tk.Toplevel):
                 pass
             self._kb_win = None   # window was destroyed; reset reference
 
-        # ── 2. Try inline import of virtual_keyboard.py ───────────────────────
-        try:
-            import importlib
-            import virtual_keyboard as vkb
-            importlib.reload(vkb)
-
-            KbClass = None
-            for name in ("VirtualKeyboard", "KeyboardWindow", "Keyboard"):
-                KbClass = getattr(vkb, name, None)
-                if KbClass:
-                    break
-
-            if KbClass is not None:
-                self._kb_win = KbClass(self, self._txt)
-                self._kb_win.lift()
-                return
-        except Exception:
-            pass   # virtual_keyboard.py not found or has no matching class
-
-        # ── 3. Built-in fallback — always works, always connected to _txt ─────
-        self._kb_win = OnScreenKeyboard(self, self._txt)
+        # ── Use built-in fallback — always works, always connected to _txt ─────
+        self._kb_win = OnScreenKeyboard(self, self._txt, layout=layout)
         self._kb_win.lift()
 
     def insert_text(self, text):
@@ -458,13 +436,29 @@ class NotepadWindow(tk.Toplevel):
 class OnScreenKeyboard(tk.Toplevel):
     
 
-    ROWS = [
-        ["1","2","3","4","5","6","7","8","9","0","-","⌫"],
-        ["Q","W","E","R","T","Y","U","I","O","P","[","]","\\"],
-        ["A","S","D","F","G","H","J","K","L",";","'","Enter"],
-        ["Z","X","C","V","B","N","M",",","."],
-        ["Space"],
-    ]
+    LAYOUTS = {
+        "normal": [
+            ["1","2","3","4","5","6","7","8","9","0","-","⌫"],
+            ["Q","W","E","R","T","Y","U","I","O","P","[","]","\\"],
+            ["A","S","D","F","G","H","J","K","L",";","'","Enter"],
+            ["Z","X","C","V","B","N","M",",","."],
+            ["Space"],
+        ],
+        "alpha": [
+            ["1","2","3","4","5","6","7","8","9","0","-","⌫"],
+            ["A","B","C","D","E","F","G","H","I","J","K","L","M"],
+            ["N","O","P","Q","R","S","T","U","V","W","X","Enter"],
+            ["Y","Z",",",".",";","'","[","]","\\"],
+            ["Space"],
+        ],
+        "cluster": [
+            ["1","2","3","4","5","6","7","8","9","0","-","⌫"],
+            ["E","T","A","O","I","N","S","R","H","D","L","U"],
+            ["C","M","W","F","Y","G","P","B","V","K","X","Enter"],
+            ["J","Q","Z",",",".",";","'","[","]","\\"],
+            ["Space"],
+        ]
+    }
 
     SHIFT_MAP = {
         "`":"~","1":"!","2":"@","3":"#","4":"$","5":"%","6":"^",
@@ -475,7 +469,7 @@ class OnScreenKeyboard(tk.Toplevel):
     WIDE = {"⌫":2,"Tab":1.5,"Caps":1.8,"Enter":2,"Shift":2.3,"Space":6,"Ctrl":1.5,"Alt":1.5}
 
 
-    def __init__(self, master, target: tk.Text):
+    def __init__(self, master, target: tk.Text, layout="normal"):
         super().__init__(master)
         self.title("On-Screen Keyboard")
         self.configure(bg=BG)
@@ -484,8 +478,18 @@ class OnScreenKeyboard(tk.Toplevel):
         self._target = target
         self._shift  = False
         self._caps   = False
+        self._layout = layout
+        self.ROWS = self.LAYOUTS.get(self._layout, self.LAYOUTS["normal"])
         self._build()
         self._center()
+
+    def set_layout(self, layout):
+        if layout in self.LAYOUTS and layout != self._layout:
+            self._layout = layout
+            self.ROWS = self.LAYOUTS[layout]
+            for widget in self.winfo_children():
+                widget.destroy()
+            self._build()
 
     def _build(self):
         pad = tk.Frame(self, bg=BG, padx=8, pady=8)
