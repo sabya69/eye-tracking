@@ -28,11 +28,11 @@ class VirtualKeyboard:
             ["SPACE", "ENTER", "CLEAR", "CLOSE"],
         ],
         "cluster": [
-            list("EAIOU") + list("SRHDLU"),
-            list("CMWFY") + list("GPBVKX"),
-            list("JQZNT") + ["←"],
+            list("AE") + list("TNSH") + list("FGYP"),
+            list("IO") + list("RDLC") + list("BVKJ"),
+            list("U") + list("MW") + list("XQZ") + ["←"],
             ["SPACE", "ENTER", "CLEAR", "CLOSE"],
-]
+        ]
     }
 
     def __init__(self):

@@ -322,16 +322,7 @@ class NotepadWindow(tk.Toplevel):
         fm.add_separator()
         fm.add_command(label="Exit", command=self.destroy)
 
-        em = tk.Menu(menu, bg=SURFACE, fg=TEXT,
-                     activebackground=ACCENT, activeforeground=SURFACE, tearoff=0)
-        menu.add_cascade(label="Edit", menu=em)
-        em.add_command(label="Undo",       command=lambda: self._txt.edit_undo(),              accelerator="Ctrl+Z")
-        em.add_command(label="Redo",       command=lambda: self._txt.edit_redo(),              accelerator="Ctrl+Y")
-        em.add_separator()
-        em.add_command(label="Cut",        command=lambda: self._txt.event_generate("<<Cut>>"),   accelerator="Ctrl+X")
-        em.add_command(label="Copy",       command=lambda: self._txt.event_generate("<<Copy>>"),  accelerator="Ctrl+C")
-        em.add_command(label="Paste",      command=lambda: self._txt.event_generate("<<Paste>>"), accelerator="Ctrl+V")
-        em.add_command(label="Select All", command=lambda: self._txt.tag_add("sel","1.0","end"),  accelerator="Ctrl+A")
+
 
         tb = tk.Frame(self, bg=SURFACE, pady=8, padx=16)
         tb.pack(fill="x")

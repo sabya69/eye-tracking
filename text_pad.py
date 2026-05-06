@@ -86,12 +86,7 @@ class TextPad:
         self._save()
 
     def update_gaze(self, screen_x: float, screen_y: float):
-        """
-        Feed smoothed SCREEN pixel coords.
-        Converts to pad-window coords using fixed window position,
-        then checks button hit and runs dwell logic.
-        Returns triggered action or None.
-        """
+      
         if not self.visible:
             return None
         kx = int(screen_x - self.PAD_WIN_X)
