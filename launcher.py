@@ -316,7 +316,7 @@ class NotepadWindow(tk.Toplevel):
         fm = tk.Menu(menu, bg=SURFACE, fg=TEXT,
                      activebackground=ACCENT, activeforeground=SURFACE, tearoff=0)
         menu.add_cascade(label="File", menu=fm)
-        fm.add_command(label="New",     command=self._new,     accelerator="Ctrl+N")
+        
         fm.add_command(label="Open",    command=self._open,    accelerator="Ctrl+O")
         fm.add_command(label="Save",    command=self._save,    accelerator="Ctrl+S")
         fm.add_command(label="Save As", command=self._save_as, accelerator="Ctrl+Shift+S")
