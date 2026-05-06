@@ -240,3 +240,4 @@ class TextPad:
         # pin window to fixed screen position so gaze mapping is accurate
         cv2.imshow("Text Pad", img)
         cv2.moveWindow("Text Pad", self.PAD_WIN_X, self.PAD_WIN_Y)
+

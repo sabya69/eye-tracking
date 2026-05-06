@@ -352,6 +352,12 @@ class NotepadWindow(tk.Toplevel):
                        activebackground=SURFACE, selectcolor=SURFACE,
                        font=FS).pack(side="left")
 
+        tk.Button(tb, text="Stop Tracker", command=self.master._stop,
+                  bg=SURFACE, fg=DANGER, activebackground=BG,
+                  activeforeground=DANGER, relief="flat", bd=0,
+                  font=("Segoe UI", 11, "bold"), padx=12, pady=4,
+                  cursor="hand2").pack(side="right", padx=8)
+
         self._sv = tk.StringVar(value="Ready")
         tk.Label(tb, textvariable=self._sv, bg=SURFACE, fg=MUTED,
                  font=FS).pack(side="right", padx=12)
@@ -511,6 +517,10 @@ class OnScreenKeyboard(tk.Frame):
             self._build()
 
     def _build(self):
+        if self._layout == "cluster":
+            self._build_cluster()
+            return
+
         pad = tk.Frame(self, bg=BG, padx=8, pady=8)
         pad.pack(fill="both", expand=True)
 
@@ -545,6 +555,97 @@ class OnScreenKeyboard(tk.Frame):
         pad.columnconfigure(0, weight=1)
         tk.Label(pad, text="After Clicking the keys using tracker you can type in notepad",
                  bg=BG, fg=MUTED, font=FS).grid(row=len(self.ROWS), column=0, pady=(10,0))
+
+    def _build_cluster(self):
+        pad = tk.Frame(self, bg=SURFACE, padx=8, pady=8)
+        pad.pack(fill="both", expand=True)
+
+        def make_btn(parent, text):
+            btn = tk.Button(
+                parent, text=text, font=("Segoe UI", 16, "bold"),
+                bg=SURFACE, fg=TEXT, activebackground=ACCENT,
+                activeforeground=SURFACE, relief="flat", bd=0,
+                highlightbackground=BORDER, highlightthickness=1,
+                cursor="hand2", command=lambda k=text: self._press(k)
+            )
+            return btn
+
+        # ROW 0: NUMBERS
+        num_frame = tk.Frame(pad, bg=SURFACE)
+        num_frame.pack(fill="x", pady=(0, 8))
+        nums = ["1","2","3","4","5","6","7","8","9","0","-","⌫"]
+        for c, k in enumerate(nums):
+            num_frame.columnconfigure(c, weight=int(self.WIDE.get(k, 1)*10))
+            btn = make_btn(num_frame, k)
+            btn.grid(row=0, column=c, sticky="nsew", padx=4, pady=4)
+        num_frame.rowconfigure(0, weight=1, minsize=50)
+
+        # ROW 1: CLUSTERS
+        mid_frame = tk.Frame(pad, bg=SURFACE)
+        mid_frame.pack(fill="both", expand=True, pady=4)
+
+        # 1. VOWELS
+        v_frame = tk.Frame(mid_frame, bg=BG, highlightbackground=BORDER, highlightthickness=1, padx=8, pady=4)
+        v_frame.pack(side="left", fill="y", padx=(0,4))
+        tk.Label(v_frame, text="VOWELS", bg=BG, fg=MUTED, font=("Segoe UI", 9, "bold")).pack(pady=(0,4))
+        v_grid = tk.Frame(v_frame, bg=BG)
+        v_grid.pack(expand=True, fill="both")
+        v_keys = [["A","E"], ["I","O"], ["U", ""]]
+        for r, row in enumerate(v_keys):
+            v_grid.rowconfigure(r, weight=1, minsize=50)
+            for c, k in enumerate(row):
+                v_grid.columnconfigure(c, weight=1)
+                if k:
+                    btn = make_btn(v_grid, k)
+                    btn.grid(row=r, column=c, sticky="nsew", padx=4, pady=4)
+
+        # 2. TOP USAGE
+        t_frame = tk.Frame(mid_frame, bg=BG, highlightbackground=BORDER, highlightthickness=1, padx=8, pady=4)
+        t_frame.pack(side="left", fill="y", padx=4)
+        tk.Label(t_frame, text="TOP USAGE", bg=BG, fg=MUTED, font=("Segoe UI", 9, "bold")).pack(pady=(0,4))
+        t_grid = tk.Frame(t_frame, bg=BG)
+        t_grid.pack(expand=True, fill="both")
+        t_keys = [["T","N","S","H","R"], ["D","L","C","M","W"]]
+        for r, row in enumerate(t_keys):
+            t_grid.rowconfigure(r, weight=1, minsize=50)
+            for c, k in enumerate(row):
+                t_grid.columnconfigure(c, weight=1)
+                btn = make_btn(t_grid, k)
+                btn.grid(row=r, column=c, sticky="nsew", padx=4, pady=4)
+
+        # 3. REMAINING KEYS
+        r_frame = tk.Frame(mid_frame, bg=BG, highlightbackground=BORDER, highlightthickness=1, padx=8, pady=4)
+        r_frame.pack(side="left", fill="both", expand=True, padx=(4,0))
+        tk.Label(r_frame, text="REMAINING KEYS", bg=BG, fg=MUTED, font=("Segoe UI", 9, "bold")).pack(pady=(0,4))
+        r_grid = tk.Frame(r_frame, bg=BG)
+        r_grid.pack(expand=True, fill="both")
+        r_keys = [
+            ["F","G","Y","P","B","V"],
+            ["K","J","X","Q","Z","\\"],
+            [",",".",";","'","[","]"]
+        ]
+        for r, row in enumerate(r_keys):
+            r_grid.rowconfigure(r, weight=1, minsize=50)
+            for c, k in enumerate(row):
+                r_grid.columnconfigure(c, weight=1)
+                btn = make_btn(r_grid, k)
+                btn.grid(row=r, column=c, sticky="nsew", padx=4, pady=4)
+
+        # ROW 2: ACTION
+        act_frame = tk.Frame(pad, bg=SURFACE)
+        act_frame.pack(fill="x", pady=(8, 0))
+        act_frame.rowconfigure(0, weight=1, minsize=50)
+        
+        act_frame.columnconfigure(0, weight=2)
+        btn_enter = make_btn(act_frame, "Enter")
+        btn_enter.grid(row=0, column=0, sticky="nsew", padx=4, pady=4)
+        
+        act_frame.columnconfigure(1, weight=8)
+        btn_space = make_btn(act_frame, "Space")
+        btn_space.grid(row=0, column=1, sticky="nsew", padx=4, pady=4)
+
+        tk.Label(pad, text="After Clicking the keys using tracker you can type in notepad",
+                 bg=SURFACE, fg=MUTED, font=FS).pack(pady=(10,0))
 
     def _press(self, key):
         t = self._target
