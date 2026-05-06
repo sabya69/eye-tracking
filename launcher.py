@@ -120,7 +120,7 @@ class Launcher(tk.Tk):
             sb, text="Stop Tracker", command=self._stop,
             bg=BG   , fg=DANGER, activebackground=BG,
             activeforeground=DANGER, relief="flat", bd=0,
-            font=FB, cursor="hand2")
+            font=("Segoe UI", 16, "bold"), padx=16, pady=8, cursor="hand2")
 
         self.bind("<Escape>", lambda e: self.destroy())
         self._refresh_stats()
