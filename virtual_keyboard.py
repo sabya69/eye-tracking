@@ -28,9 +28,9 @@ class VirtualKeyboard:
             ["SPACE", "ENTER", "CLEAR", "CLOSE"],
         ],
         "cluster": [
-            list("AE") + list("TNSH") + list("FGYP"),
-            list("IO") + list("RDLC") + list("BVKJ"),
-            list("U") + list("MW") + list("XQZ") + ["←"],
+            list("ETAOI") + list("FGYPB"),
+            list("NSHRD") + list("VKJXQ"),
+            list("LCUMW") + list("Z") + ["←"],
             ["SPACE", "ENTER", "CLEAR", "CLOSE"],
         ]
     }
