@@ -317,9 +317,7 @@ class NotepadWindow(tk.Toplevel):
                      activebackground=ACCENT, activeforeground=SURFACE, tearoff=0)
         menu.add_cascade(label="File", menu=fm)
         
-        fm.add_command(label="Open",    command=self._open,    accelerator="Ctrl+O")
-        fm.add_command(label="Save",    command=self._save,    accelerator="Ctrl+S")
-        fm.add_command(label="Save As", command=self._save_as, accelerator="Ctrl+Shift+S")
+        
         fm.add_command(label="Open Keyboard", command=self._open_keyboard, accelerator="Ctrl+Shift+K")
         fm.add_separator()
         fm.add_command(label="Exit", command=self.destroy)
