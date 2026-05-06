@@ -583,31 +583,40 @@ class OnScreenKeyboard(tk.Frame):
         # ROW 1: CLUSTERS
         mid_frame = tk.Frame(pad, bg=SURFACE)
         mid_frame.pack(fill="both", expand=True, pady=4)
+        
+        # Proportional weights so all buttons have exact same width
+        mid_frame.columnconfigure(0, weight=2)
+        mid_frame.columnconfigure(1, weight=5)
+        mid_frame.columnconfigure(2, weight=6)
+        mid_frame.rowconfigure(0, weight=1)
 
         # 1. VOWELS
         v_frame = tk.Frame(mid_frame, bg=BG, highlightbackground=BORDER, highlightthickness=1, padx=8, pady=4)
-        v_frame.pack(side="left", fill="y", padx=(0,4))
+        v_frame.grid(row=0, column=0, sticky="nsew", padx=(0,4))
         tk.Label(v_frame, text="VOWELS", bg=BG, fg=MUTED, font=("Segoe UI", 9, "bold")).pack(pady=(0,4))
         v_grid = tk.Frame(v_frame, bg=BG)
         v_grid.pack(expand=True, fill="both")
         v_keys = [["A","E"], ["I","O"], ["U", ""]]
         for r, row in enumerate(v_keys):
-            v_grid.rowconfigure(r, weight=1, minsize=50)
+            v_grid.rowconfigure(r, weight=1, minsize=65)
             for c, k in enumerate(row):
                 v_grid.columnconfigure(c, weight=1)
-                if k:
+                if k == "U":
+                    btn = make_btn(v_grid, k)
+                    btn.grid(row=r, column=0, columnspan=2, sticky="nsew", padx=4, pady=4)
+                elif k:
                     btn = make_btn(v_grid, k)
                     btn.grid(row=r, column=c, sticky="nsew", padx=4, pady=4)
 
         # 2. TOP USAGE
         t_frame = tk.Frame(mid_frame, bg=BG, highlightbackground=BORDER, highlightthickness=1, padx=8, pady=4)
-        t_frame.pack(side="left", fill="y", padx=4)
+        t_frame.grid(row=0, column=1, sticky="nsew", padx=4)
         tk.Label(t_frame, text="TOP USAGE", bg=BG, fg=MUTED, font=("Segoe UI", 9, "bold")).pack(pady=(0,4))
         t_grid = tk.Frame(t_frame, bg=BG)
         t_grid.pack(expand=True, fill="both")
         t_keys = [["T","N","S","H","R"], ["D","L","C","M","W"]]
         for r, row in enumerate(t_keys):
-            t_grid.rowconfigure(r, weight=1, minsize=50)
+            t_grid.rowconfigure(r, weight=1, minsize=65)
             for c, k in enumerate(row):
                 t_grid.columnconfigure(c, weight=1)
                 btn = make_btn(t_grid, k)
@@ -615,7 +624,7 @@ class OnScreenKeyboard(tk.Frame):
 
         # 3. REMAINING KEYS
         r_frame = tk.Frame(mid_frame, bg=BG, highlightbackground=BORDER, highlightthickness=1, padx=8, pady=4)
-        r_frame.pack(side="left", fill="both", expand=True, padx=(4,0))
+        r_frame.grid(row=0, column=2, sticky="nsew", padx=(4,0))
         tk.Label(r_frame, text="REMAINING KEYS", bg=BG, fg=MUTED, font=("Segoe UI", 9, "bold")).pack(pady=(0,4))
         r_grid = tk.Frame(r_frame, bg=BG)
         r_grid.pack(expand=True, fill="both")
