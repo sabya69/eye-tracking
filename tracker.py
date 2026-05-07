@@ -152,6 +152,63 @@ class AttentionTracker:
         y_pos = (self.screen_h - win_h) // 2
         cv2.moveWindow(WIN, x_pos, y_pos)
 
+        # -- Phase 0: Auto-Detect Returning User ----------------------------- #
+        print("[CAL] Phase 0: Checking for returning user ...")
+        t_end = time.time() + 2.0  # Allow 2 seconds to find a face
+        user_embedding = None
+        while time.time() < t_end:
+            ok, frame = self.cap.read()
+            if not ok: continue
+            frame = cv2.flip(frame, 1)
+            h, w = frame.shape[:2]
+            
+            ov = frame.copy()
+            cv2.rectangle(ov, (0,0), (w,h), (20,20,20), -1)
+            cv2.addWeighted(ov, 0.45, frame, 0.55, 0, frame)
+            cv2.putText(frame, "Scanning face...", (w//2-140, h//2), cv2.FONT_HERSHEY_DUPLEX, 0.9, (0,220,255), 2)
+            cv2.imshow(WIN, frame)
+            if cv2.waitKey(1) & 0xFF == 27: return
+            
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            mp_img = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+            res = self.detector.detect_for_video(mp_img, int(time.time()*1000))
+            if res.face_landmarks:
+                user_embedding = self._compute_face_embedding(res.face_landmarks[0], w, h)
+                break
+                
+        if user_embedding:
+            profile_path = "calibration_profiles.json"
+            if os.path.exists(profile_path):
+                try:
+                    with open(profile_path, "r") as f:
+                        profiles = json.load(f)
+                        
+                    for profile in profiles:
+                        saved_emb = np.array(profile["embedding"])
+                        mse = np.mean((np.array(user_embedding) - saved_emb) ** 2)
+                        if mse < 0.008:
+                            print(f"[CAL] Returning user detected! MSE: {mse:.5f}")
+                            self.EAR_TH_L = profile["EAR_TH_L"]
+                            self.EAR_TH_R = profile["EAR_TH_R"]
+                            self.gaze_calib = profile["gaze_calib"]
+                            
+                            ov = frame.copy()
+                            cv2.rectangle(ov, (0,0), (w,h), (20,20,20), -1)
+                            cv2.addWeighted(ov, 0.8, frame, 0.2, 0, frame)
+                            cv2.putText(frame, "Welcome Back! Calibration Skipped.", (w//2-300, h//2), cv2.FONT_HERSHEY_DUPLEX, 1.0, (100,255,100), 2)
+                            cv2.imshow(WIN, frame)
+                            cv2.waitKey(1500)
+                            
+                            import sys
+                            if sys.platform == "win32":
+                                import ctypes
+                                hwnd = ctypes.windll.user32.FindWindowW(None, WIN)
+                                if hwnd:
+                                    ctypes.windll.user32.ShowWindow(hwnd, 6)
+                            return
+                except Exception as e:
+                    print(f"[WARN] Error reading profiles: {e}")
+
         # -- Phase 1: EAR baseline ------------------------------------------- #
         print(f"[CAL] Phase 1: Eyes open for {duration}s ...")
         l_ears, r_ears = [], []
@@ -239,6 +296,28 @@ class AttentionTracker:
         else:
             print("[CAL] Not enough gaze data -- using defaults")
 
+        if user_embedding:
+            try:
+                profiles = []
+                profile_path = "calibration_profiles.json"
+                if os.path.exists(profile_path):
+                    with open(profile_path, "r") as f:
+                        profiles = json.load(f)
+                
+                profiles.append({
+                    "embedding": user_embedding,
+                    "EAR_TH_L": self.EAR_TH_L,
+                    "EAR_TH_R": self.EAR_TH_R,
+                    "gaze_calib": self.gaze_calib,
+                    "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                })
+                
+                with open(profile_path, "w") as f:
+                    json.dump(profiles, f, indent=4)
+                print("[CAL] Saved new calibration profile.")
+            except Exception as e:
+                print(f"[WARN] Could not save profile: {e}")
+
         import sys
         if sys.platform == "win32":
             import ctypes
@@ -249,6 +328,21 @@ class AttentionTracker:
     # =========================================================================
     #  HELPERS
     # =========================================================================
+    def _compute_face_embedding(self, landmarks, w, h):
+        key_indices = [33, 133, 362, 263, 1, 152, 234, 454, 10, 168]
+        pts = [np.array([landmarks[i].x * w, landmarks[i].y * h, landmarks[i].z * w]) for i in key_indices]
+        
+        dists = []
+        for i in range(len(pts)):
+            for j in range(i + 1, len(pts)):
+                dists.append(np.linalg.norm(pts[i] - pts[j]))
+                
+        ref_dist = np.linalg.norm(pts[6] - pts[7])
+        if ref_dist < 1e-6:
+            ref_dist = 1.0
+            
+        return [float(d / ref_dist) for d in dists]
+
     def _ear(self, pts):
         A = np.linalg.norm(np.array(pts[1])-np.array(pts[5]))
         B = np.linalg.norm(np.array(pts[2])-np.array(pts[4]))
