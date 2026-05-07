@@ -341,7 +341,7 @@ class NotepadWindow(tk.Toplevel):
 
         tk.Label(tb, text="|", bg=SURFACE, fg=BORDER, font=FB).pack(side="left", padx=8)
         tk.Label(tb, text="Size", bg=SURFACE, fg=MUTED, font=FS).pack(side="left")
-        self._fsize = tk.IntVar(value=16)
+        self._fsize = tk.IntVar(value=25)
         tk.Spinbox(tb, from_=8, to=32, textvariable=self._fsize, width=3,
                    relief="flat", bg=BG, fg=TEXT, font=FM,
                    command=self._resize).pack(side="left", padx=8)
