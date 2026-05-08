@@ -89,7 +89,6 @@ class Launcher(tk.Tk):
         self.modules = [
             ("Eye Tracker", "Calibrate & start gaze tracking",  GREEN, self._start_tracker),
             ("Notepad","Text editor  ·  save / open files", AMBER,  lambda: NotepadWindow(self)),
-            
         ]
         
  
@@ -102,6 +101,10 @@ class Launcher(tk.Tk):
         for i in range(len(self.modules)):
             body.grid_columnconfigure(0, weight=1)
         body.grid_rowconfigure(0, weight=1)
+
+        # ── standalone apps ───────────────────────────────────────────────────
+        chrome_card = _Card(wrapper, "Google Chrome", "Web Browser", "#4285F4", lambda: self._launch_external("chrome.exe"))
+        chrome_card.place(relx=0.95, rely=0.95, anchor="se")
 
         _sep(self)
 
@@ -153,6 +156,17 @@ class Launcher(tk.Tk):
                 self._sv.set(f"  Error opening report: {e}")
         else:
             self._sv.set("  No session report found. Run tracker first.")
+
+    def _launch_external(self, app_name):
+        try:
+            if sys.platform == "win32":
+                os.startfile(app_name)
+            else:
+                subprocess.Popen([app_name])
+            self._flash(f"Launching {app_name}...")
+        except Exception as e:
+            self._flash(f"Failed to launch {app_name}")
+            print(f"[WARN] Could not launch {app_name}: {e}")
 
     # ── tracker control ───────────────────────────────────────────────────────
     def _start_tracker(self):
