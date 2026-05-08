@@ -185,8 +185,13 @@ class AttentionTracker:
                         
                     for profile in profiles:
                         saved_emb = np.array(profile["embedding"])
+                        # Prevent broadcasting errors if the embedding size changed in newer versions
+                        if len(user_embedding) != len(saved_emb):
+                            continue
+                        
                         mse = np.mean((np.array(user_embedding) - saved_emb) ** 2)
-                        if mse < 0.008:
+                        # Stricter threshold to avoid falsely identifying different users as the same person
+                        if mse < 0.0015:
                             print(f"[CAL] Returning user detected! MSE: {mse:.5f}")
                             self.EAR_TH_L = profile["EAR_TH_L"]
                             self.EAR_TH_R = profile["EAR_TH_R"]
@@ -329,7 +334,8 @@ class AttentionTracker:
     #  HELPERS
     # =========================================================================
     def _compute_face_embedding(self, landmarks, w, h):
-        key_indices = [33, 133, 362, 263, 1, 152, 234, 454, 10, 168]
+        # Increased the number of key indices for a much more robust and unique face signature
+        key_indices = [33, 133, 362, 263, 1, 152, 234, 454, 10, 168, 61, 291, 94, 164, 0, 17]
         pts = [np.array([landmarks[i].x * w, landmarks[i].y * h, landmarks[i].z * w]) for i in key_indices]
         
         dists = []
