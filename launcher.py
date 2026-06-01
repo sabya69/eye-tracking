@@ -103,8 +103,11 @@ class Launcher(tk.Tk):
         body.grid_rowconfigure(0, weight=1)
 
         # ── standalone apps ───────────────────────────────────────────────────
-        chrome_card = _Card(wrapper, "Google Chrome", "Web Browser", "#4285F4", lambda: self._launch_external("chrome.exe"))
-        chrome_card.place(relx=0.95, rely=0.95, anchor="se")
+        chrome_card = _AppIcon(wrapper, "Google Chrome", "#4285F4", lambda: self._launch_external("chrome.exe"))
+        chrome_card.place(relx=0.97, rely=0.95, anchor="se")
+
+        chatting_card = _AppIcon(wrapper, "Chatbox", "#10A37F", lambda: self._launch_external("https://test-real-mk6w.onrender.com/"))
+        chatting_card.place(relx=0.87, rely=0.78, anchor="sw")
 
         _sep(self)
 
@@ -293,6 +296,42 @@ class _Card(tk.Frame):
         self._dl.pack(fill="x")
 
         for w in (self, bar, inner, self._nl, self._dl):
+            w.bind("<Enter>",    self._on)
+            w.bind("<Leave>",    self._off)
+            w.bind("<Button-1>", lambda e: self._cmd())
+
+    def _on(self, _=None):
+        self.configure(highlightbackground=self._color, bg=SURFACE)
+        self._nl.configure(fg=self._color)
+
+    def _off(self, _=None):
+        self.configure(highlightbackground=BORDER, bg=SURFACE)
+        self._nl.configure(fg=TEXT)
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  APP ICON CARD  (smaller button tile for corners)
+# ─────────────────────────────────────────────────────────────────────────────
+class _AppIcon(tk.Frame):
+    W = 180;  H = 60
+
+    def __init__(self, parent, name, color, cmd):
+        super().__init__(parent, bg=SURFACE, width=self.W, height=self.H,
+                         highlightbackground=BORDER, highlightthickness=1,
+                         cursor="hand2")
+        self.pack_propagate(False)
+        self._color = color
+        self._cmd   = cmd
+
+        bar = tk.Frame(self, bg=color, width=5)
+        bar.pack(side="left", fill="y")
+
+        inner = tk.Frame(self, bg=SURFACE, padx=12, pady=12)
+        inner.pack(fill="both", expand=True)
+
+        self._nl = tk.Label(inner, text=name, bg=SURFACE, fg=TEXT, font=("Segoe UI", 11, "bold"), anchor="center")
+        self._nl.pack(fill="both", expand=True)
+
+        for w in (self, bar, inner, self._nl):
             w.bind("<Enter>",    self._on)
             w.bind("<Leave>",    self._off)
             w.bind("<Button-1>", lambda e: self._cmd())
