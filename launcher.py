@@ -106,11 +106,17 @@ class Launcher(tk.Tk):
         chrome_card = _AppIcon(wrapper, "Google Chrome", "#4285F4", lambda: self._launch_external("chrome.exe"))
         chrome_card.place(relx=0.97, rely=0.95, anchor="se")
 
-        chatting_card = _AppIcon(wrapper, "Chatting", "#10A37F", lambda: self._launch_external("https://test-real-mk6w.onrender.com/"))
+        chatting_card = _AppIcon(wrapper, "Chatting", "#10A37F", lambda: self._launch_external("#"))
         chatting_card.place(relx=0.87, rely=0.78, anchor="sw")
+        #after all the updation done developer will paste # => https://test-real-mk6w.onrender.com/
 
-        Youtube_card= _AppIcon(wrapper, "YouTube", "#FF0000", lambda: self._launch_external("https://www.youtube.com/"))
+        Youtube_card= _AppIcon(wrapper, "YouTube", "#FF0000", lambda: self._launch_external("#"))
         Youtube_card.place(relx=0.77, rely=0.61, anchor="sw")
+        #after all the updation done developer will paste # => https://www.youtube.com/
+
+        
+
+        
 
         _sep(self)
 
