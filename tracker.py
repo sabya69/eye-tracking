@@ -62,6 +62,7 @@ class AttentionTracker:
         self.detector = vision.FaceLandmarker.create_from_options(opts)
 
         # -- Camera ---------------------------------------------------------- #
+        #self.cap = cv2.VideoCapture(0)
         self.cap = cv2.VideoCapture(0)
         if not self.cap.isOpened():
             raise RuntimeError("Webcam not detected")
