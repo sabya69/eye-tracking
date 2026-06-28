@@ -106,9 +106,8 @@ class Launcher(tk.Tk):
         chrome_card = _AppIcon(wrapper, "Google Chrome", "#4285F4", lambda: self._launch_external("chrome.exe"))
         chrome_card.place(relx=0.97, rely=0.95, anchor="se")
 
-        chatting_card = _AppIcon(wrapper, "Chatting", "#10A37F", lambda: self._launch_external("https://test-real-mk6w.onrender.com"))
+        chatting_card = _AppIcon(wrapper, "Chatting", "#10A37F", lambda: ChatWindow(self))
         chatting_card.place(relx=0.87, rely=0.78, anchor="sw")
-        #after all the updation done developer will paste # => https://test-real-mk6w.onrender.com/
 
         Youtube_card= _AppIcon(wrapper, "YouTube", "#FF0000", lambda: self._launch_external("https://www.youtube.com/"))
         Youtube_card.place(relx=0.77, rely=0.61, anchor="sw")
@@ -744,6 +743,210 @@ class OnScreenKeyboard(tk.Frame):
         t.focus_set()
 
 # ─────────────────────────────────────────────────────────────────────────────
+#  CUSTOM WEBVIEW2 WIDGET — to bypass E_ACCESSDENIED by using a custom user data folder
+# ─────────────────────────────────────────────────────────────────────────────
+try:
+    import clr
+    import ctypes
+    from uuid import uuid4
+    from webview.window import Window
+    from webview.platforms.edgechromium import EdgeChrome
+    
+    _webview_windows = []
+    
+    class CustomWebView2(tk.Frame):
+        def __init__(self, parent, width: int, height: int, url: str = '', **kw):
+            tk.Frame.__init__(self, parent, width=width, height=height, **kw)
+            
+            # Use a writable directory in AppData to avoid E_ACCESSDENIED
+            cache_dir = os.path.join(os.getenv('APPDATA', os.path.expanduser('~')), 'SSDB_ChatBox_WebView2')
+            os.makedirs(cache_dir, exist_ok=True)
+            
+            clr.AddReference('System.Windows.Forms')
+            from System.Windows.Forms import Control
+            
+            control = Control()
+            uid = 'master' if len(_webview_windows) == 0 else 'child_' + uuid4().hex[:8]
+            window = Window(uid, str(id(self)), url=None, html=None, js_api=None, width=width, height=height, x=None, y=None,
+                          resizable=True, fullscreen=False, min_size=(200, 100), hidden=False,
+                          frameless=False, easy_drag=True,
+                          minimized=False, on_top=False, confirm_close=False, background_color='#FFFFFF',
+                          transparent=False, text_select=True, localization=None,
+                          zoomable=True, draggable=True, vibrancy=False)
+            self.window = window
+            
+            self.web_view = EdgeChrome(control, window, cache_dir)
+            self.control = control
+            if hasattr(self.web_view, 'web_view'):
+                self.web = self.web_view.web_view
+            else:
+                self.web = self.web_view.webview
+            _webview_windows.append(window)
+            self.width = width
+            self.height = height
+            self.parent = parent
+            self.chwnd = int(str(self.control.Handle))
+            
+            user32 = ctypes.windll.user32
+            user32.SetParent(self.chwnd, self.winfo_id())
+            user32.MoveWindow(self.chwnd, 0, 0, width, height, True)
+            self.loaded = window.events.loaded
+            
+            self.bind('<Destroy>', lambda event: self.web.Dispose())
+            self.bind('<Configure>', self.__resize_webview)
+            self.newwindow = None
+            
+            if url != '':
+                self.load_url(url)
+            self.core = None
+            self.web.CoreWebView2InitializationCompleted += self.__load_core
+
+        def __resize_webview(self, event):
+            ctypes.windll.user32.MoveWindow(self.chwnd, 0, 0, self.winfo_width(), self.winfo_height(), True)
+
+        def __load_core(self, sender, _):
+            self.core = sender.CoreWebView2
+            self.core.NewWindowRequested -= self.web_view.on_new_window_request
+            if self.newwindow != None:
+                self.core.NewWindowRequested += self.newwindow
+            settings = sender.CoreWebView2.Settings
+            settings.AreDefaultContextMenusEnabled = True
+            settings.AreDevToolsEnabled = True
+
+        def load_url(self, url):
+            self.web_view.load_url(url)
+
+        def reload(self):
+            if self.core:
+                self.core.Reload()
+
+        def event_new_window(self, command=None):
+            self.newwindow = command
+except Exception as e:
+    import traceback
+    traceback.print_exc()
+    CustomWebView2 = None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  CHATTING WINDOW — with integrated WebView2 browser
+# ─────────────────────────────────────────────────────────────────────────────
+class ChatWindow(tk.Toplevel):
+    def __init__(self, master):
+        super().__init__(master)
+        self.title("Chatting - SSDB Real-Time Chat")
+        self.geometry("1100x850")
+        self.configure(bg=SURFACE)
+        self.state("zoomed")
+        
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+        
+        # Header
+        self.hdr = tk.Frame(self, bg=SURFACE, padx=24, pady=12)
+        self.hdr.pack(fill="x")
+        
+        tk.Label(self.hdr, text="SSDB ChatBox", bg=SURFACE, fg=TEXT, font=("Segoe UI", 14, "bold")).pack(side="left")
+        
+        self.status_lbl = tk.Label(self.hdr, text="Loading secure chat session...", bg=SURFACE, fg=MUTED, font=FS)
+        self.status_lbl.pack(side="right", padx=10)
+        
+        _sep(self)
+        
+        # Frame for webview
+        self.web_frame = tk.Frame(self, bg=BG)
+        self.web_frame.pack(fill="both", expand=True)
+        
+        self.after(100, self._load_webview)
+        
+    def _load_webview(self):
+        try:
+            if CustomWebView2 is None:
+                raise ImportError("Required webview libraries or runtime not available.")
+            
+            # Create CustomWebView2 widget inside the web_frame
+            self.webview = CustomWebView2(self.web_frame, 1100, 800, url="https://test-real-mk6w.onrender.com")
+            self.webview.pack(fill="both", expand=True)
+            self.status_lbl.config(text="Connected", fg=GREEN)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            self.status_lbl.config(text="Connection Error", fg=DANGER)
+            self._show_fallback_error(e)
+            
+    def _show_fallback_error(self, error):
+        # Clear the web_frame and show a friendly error
+        for widget in self.web_frame.winfo_children():
+            widget.destroy()
+            
+        err_container = tk.Frame(self.web_frame, bg=BG, padx=40, pady=40)
+        err_container.place(relx=0.5, rely=0.5, anchor="center")
+        
+        tk.Label(err_container, text="Could not load Chatting UI", bg=BG, fg=DANGER, font=("Segoe UI", 16, "bold")).pack(pady=(0, 10))
+        
+        msg = (
+            "The 'tkwebview2' and 'pywebview' libraries are required to embed the chat interface.\n\n"
+            "If you see this error, please make sure they are installed and you have the WebView2 runtime.\n"
+            "Otherwise, you can open the chatting website in your external browser instead."
+        )
+        tk.Label(err_container, text=msg, bg=BG, fg=TEXT, font=FB, justify="center", wraplength=500).pack(pady=10)
+        
+        btn_frame = tk.Frame(err_container, bg=BG)
+        btn_frame.pack(pady=20)
+        
+        # Button to open in external browser
+        tk.Button(
+            btn_frame, text="Open in Browser", command=self._open_external,
+            bg=ACCENT, fg=SURFACE, activebackground=ACCENT, activeforeground=SURFACE,
+            relief="flat", font=("Segoe UI", 11, "bold"), padx=15, pady=8, cursor="hand2"
+        ).pack(side="left", padx=10)
+        
+        # Button to retry loading
+        tk.Button(
+            btn_frame, text="Retry", command=self._retry_load,
+            bg=SURFACE, fg=TEXT, activebackground=BG, activeforeground=TEXT,
+            relief="flat", highlightbackground=BORDER, highlightthickness=1,
+            font=("Segoe UI", 11), padx=15, pady=8, cursor="hand2"
+        ).pack(side="left", padx=10)
+        
+    def _open_external(self):
+        import webbrowser
+        webbrowser.open("https://test-real-mk6w.onrender.com")
+        self.destroy()
+        
+    def _retry_load(self):
+        for widget in self.web_frame.winfo_children():
+            widget.destroy()
+        self.status_lbl.config(text="Retrying connection...", fg=MUTED)
+        self.after(500, self._load_webview)
+        
+    def _on_close(self):
+        # Explicitly destroy the webview to free resources
+        if hasattr(self, 'webview') and self.webview is not None:
+            try:
+                self.webview.web.Dispose()
+            except:
+                pass
+        self.destroy()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    app = Launcher()
-    app.mainloop()
+    # To support WebView2, the Tkinter event loop must run in a Single-Threaded Apartment (STA) thread.
+    # Since pythonnet initializes the main thread as MTA, we start the Tkinter app in a new STA thread.
+    try:
+        import clr
+        clr.AddReference('System.Threading')
+        from System.Threading import Thread, ApartmentState, ThreadStart
+        
+        def start_gui():
+            app = Launcher()
+            app.mainloop()
+            
+        t = Thread(ThreadStart(start_gui))
+        t.ApartmentState = ApartmentState.STA
+        t.Start()
+        t.Join()
+    except Exception as e:
+        # Fallback to running on the main thread if pythonnet/CLR is not available
+        app = Launcher()
+        app.mainloop()
