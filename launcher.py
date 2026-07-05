@@ -103,15 +103,14 @@ class Launcher(tk.Tk):
         body.grid_rowconfigure(0, weight=1)
 
         # ── standalone apps ───────────────────────────────────────────────────
-        chrome_card = _AppIcon(wrapper, "Google Chrome", "#4285F4", lambda: self._launch_external("chrome.exe"))
+        chrome_card = _AppIcon(wrapper, "Google Chrome", "#4285F4", lambda: BrowserWindow(self, "Google Chrome", "https://www.google.com"))
         chrome_card.place(relx=0.97, rely=0.95, anchor="se")
 
         chatting_card = _AppIcon(wrapper, "Chatting", "#10A37F", lambda: ChatWindow(self))
         chatting_card.place(relx=0.87, rely=0.78, anchor="sw")
 
-        Youtube_card= _AppIcon(wrapper, "YouTube", "#FF0000", lambda: self._launch_external("https://www.youtube.com/"))
+        Youtube_card= _AppIcon(wrapper, "YouTube", "#FF0000", lambda: BrowserWindow(self, "YouTube", "https://www.youtube.com"))
         Youtube_card.place(relx=0.77, rely=0.61, anchor="sw")
-        #after all the updation done developer will paste # => https://www.youtube.com/
 
         
 
@@ -921,6 +920,202 @@ class ChatWindow(tk.Toplevel):
         
     def _on_close(self):
         # Explicitly destroy the webview to free resources
+        if hasattr(self, 'webview') and self.webview is not None:
+            try:
+                self.webview.web.Dispose()
+            except:
+                pass
+        self.destroy()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  EMBEDDED BROWSER WINDOW — with back, forward, reload, and search/address bar
+# ─────────────────────────────────────────────────────────────────────────────
+class BrowserWindow(tk.Toplevel):
+    def __init__(self, master, title, url):
+        super().__init__(master)
+        self.title(title)
+        self.geometry("1200x850")
+        self.configure(bg=SURFACE)
+        self.state("zoomed")
+        
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+        
+        # Header
+        self.hdr = tk.Frame(self, bg=SURFACE, padx=24, pady=8)
+        self.hdr.pack(fill="x")
+        
+        # Left side: Title + Navigation buttons
+        tk.Label(self.hdr, text=title, bg=SURFACE, fg=TEXT, font=("Segoe UI", 14, "bold")).pack(side="left", padx=(0, 15))
+        
+        btn_font = ("Segoe UI", 11, "bold")
+        self.back_btn = tk.Button(
+            self.hdr, text="◀ Back", command=self._go_back,
+            bg=SURFACE, fg=ACCENT, activebackground=BG, activeforeground=ACCENT,
+            relief="flat", font=btn_font, padx=8, pady=4, cursor="hand2"
+        )
+        self.back_btn.pack(side="left", padx=2)
+        
+        self.fwd_btn = tk.Button(
+            self.hdr, text="Forward ▶", command=self._go_forward,
+            bg=SURFACE, fg=ACCENT, activebackground=BG, activeforeground=ACCENT,
+            relief="flat", font=btn_font, padx=8, pady=4, cursor="hand2"
+        )
+        self.fwd_btn.pack(side="left", padx=2)
+        
+        self.reload_btn = tk.Button(
+            self.hdr, text="Reload ⟳", command=self._reload,
+            bg=SURFACE, fg=MUTED, activebackground=BG, activeforeground=TEXT,
+            relief="flat", font=btn_font, padx=8, pady=4, cursor="hand2"
+        )
+        self.reload_btn.pack(side="left", padx=2)
+        
+        # Address bar (URL entry)
+        self.url_var = tk.StringVar(value=url)
+        self.url_entry = tk.Entry(
+            self.hdr, textvariable=self.url_var, font=("Segoe UI", 11),
+            bg=BG, fg=TEXT, relief="flat", highlightbackground=BORDER, highlightthickness=1
+        )
+        self.url_entry.pack(side="left", fill="x", expand=True, padx=15, pady=4)
+        self.url_entry.bind("<Return>", self._navigate_to_entry)
+        
+        # Right side: Status label
+        self.status_lbl = tk.Label(self.hdr, text="Loading secure browser session...", bg=SURFACE, fg=MUTED, font=FS)
+        self.status_lbl.pack(side="right", padx=10)
+        
+        _sep(self)
+        
+        # Frame for webview
+        self.web_frame = tk.Frame(self, bg=BG)
+        self.web_frame.pack(fill="both", expand=True)
+        
+        self.initial_url = url
+        self.after(100, self._load_webview)
+        
+    def _load_webview(self):
+        try:
+            if CustomWebView2 is None:
+                raise ImportError("Required webview libraries or runtime not available.")
+            
+            # Create CustomWebView2 widget inside the web_frame
+            self.webview = CustomWebView2(self.web_frame, 1200, 800, url=self.initial_url)
+            self.webview.pack(fill="both", expand=True)
+            self.status_lbl.config(text="Connected", fg=GREEN)
+            
+            # Start loop to update address bar URL as navigation occurs
+            self.after(1000, self._check_url_loop)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            self.status_lbl.config(text="Connection Error", fg=DANGER)
+            self._show_fallback_error(e)
+            
+    def _check_url_loop(self):
+        if hasattr(self, 'webview') and self.webview is not None:
+            try:
+                if hasattr(self.webview, 'web') and self.webview.web is not None:
+                    current_uri = self.webview.web.Source
+                    if current_uri is not None:
+                        current_url = str(current_uri)
+                        # Avoid updating if user is actively editing (has focus)
+                        if self.focus_get() != self.url_entry and current_url != self.url_var.get():
+                            self.url_var.set(current_url)
+            except:
+                pass
+        try:
+            if self.winfo_exists():
+                self.after(1000, self._check_url_loop)
+        except:
+            pass
+            
+    def _navigate_to_entry(self, event=None):
+        url = self.url_var.get().strip()
+        if not url:
+            return
+        
+        # Handle search vs URL
+        if not (url.startswith("http://") or url.startswith("https://")):
+            if "." in url and " " not in url:
+                url = "https://" + url
+            else:
+                import urllib.parse
+                query = urllib.parse.quote(url)
+                url = f"https://www.google.com/search?q={query}"
+        
+        self.url_var.set(url)
+        if hasattr(self, 'webview') and self.webview is not None:
+            try:
+                self.webview.load_url(url)
+            except Exception as e:
+                print("[ERROR] Navigation failed:", e)
+                
+    def _go_back(self):
+        if hasattr(self, 'webview') and self.webview is not None:
+            try:
+                if hasattr(self.webview, 'web') and self.webview.web is not None:
+                    self.webview.web.GoBack()
+            except Exception as e:
+                print("[ERROR] GoBack failed:", e)
+                
+    def _go_forward(self):
+        if hasattr(self, 'webview') and self.webview is not None:
+            try:
+                if hasattr(self.webview, 'web') and self.webview.web is not None:
+                    self.webview.web.GoForward()
+            except Exception as e:
+                print("[ERROR] GoForward failed:", e)
+                
+    def _reload(self):
+        if hasattr(self, 'webview') and self.webview is not None:
+            try:
+                self.webview.reload()
+            except Exception as e:
+                print("[ERROR] Reload failed:", e)
+                
+    def _show_fallback_error(self, error):
+        for widget in self.web_frame.winfo_children():
+            widget.destroy()
+            
+        err_container = tk.Frame(self.web_frame, bg=BG, padx=40, pady=40)
+        err_container.place(relx=0.5, rely=0.5, anchor="center")
+        
+        tk.Label(err_container, text=f"Could not load {self.title()}", bg=BG, fg=DANGER, font=("Segoe UI", 16, "bold")).pack(pady=(0, 10))
+        
+        msg = (
+            "The 'tkwebview2' and 'pywebview' libraries are required to embed the browser interface.\n\n"
+            "If you see this error, please make sure they are installed and you have the WebView2 runtime.\n"
+            "Otherwise, you can open the website in your external browser instead."
+        )
+        tk.Label(err_container, text=msg, bg=BG, fg=TEXT, font=FB, justify="center", wraplength=500).pack(pady=10)
+        
+        btn_frame = tk.Frame(err_container, bg=BG)
+        btn_frame.pack(pady=20)
+        
+        tk.Button(
+            btn_frame, text="Open in Browser", command=self._open_external,
+            bg=ACCENT, fg=SURFACE, activebackground=ACCENT, activeforeground=SURFACE,
+            relief="flat", font=("Segoe UI", 11, "bold"), padx=15, pady=8, cursor="hand2"
+        ).pack(side="left", padx=10)
+        
+        tk.Button(
+            btn_frame, text="Retry", command=self._retry_load,
+            bg=SURFACE, fg=TEXT, activebackground=BG, activeforeground=TEXT,
+            relief="flat", highlightbackground=BORDER, highlightthickness=1,
+            font=("Segoe UI", 11), padx=15, pady=8, cursor="hand2"
+        ).pack(side="left", padx=10)
+        
+    def _open_external(self):
+        import webbrowser
+        webbrowser.open(self.url_var.get())
+        self.destroy()
+        
+    def _retry_load(self):
+        for widget in self.web_frame.winfo_children():
+            widget.destroy()
+        self.status_lbl.config(text="Retrying connection...", fg=MUTED)
+        self.after(500, self._load_webview)
+        
+    def _on_close(self):
         if hasattr(self, 'webview') and self.webview is not None:
             try:
                 self.webview.web.Dispose()
