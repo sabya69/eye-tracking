@@ -1144,15 +1144,15 @@ class TextEntryExperiment(tk.Toplevel):
     SENTENCES = ["my name is sabyasachi"]
     STIMULI   = WORDS + SENTENCES          # combined trial list
 
-    MEMORIZE_SECS = 120                    # overt: 2-min memorization window
+    MEMORIZE_SECS = 30                     # overt: memorization window (30 s for testing)
 
-    # ── Experiment colours ────────────────────────────────────────────────────
-    _C_BG  = "#0F0F1A"
-    _C_FG  = "#F0F4FF"
-    _C_ACC = "#7C3AED"    # purple   (overt accent)
-    _C_BLU = "#2563EB"    # blue     (covert accent)
-    _C_DIM = "#6B7280"
-    _C_FIX = "#FFFFFF"
+    # ── Experiment colours (plain white theme) ──────────────────────────────
+    _C_BG  = "#FFFFFF"   # white background
+    _C_FG  = "#1A1D23"   # dark text
+    _C_ACC = "#2563EB"   # blue accent  (overt)
+    _C_BLU = "#2563EB"   # blue accent  (covert)
+    _C_DIM = "#6B7280"   # muted gray
+    _C_FIX = "#000000"   # black fixation cross
     _C_GRN = "#16A34A"
 
     # ── Fonts ─────────────────────────────────────────────────────────────────
@@ -1165,13 +1165,13 @@ class TextEntryExperiment(tk.Toplevel):
 
     # ── Per-method instruction text ───────────────────────────────────────────
     _OVERT_INSTR = (
-        "📋  Overt Method — Instructions",
+        "Overt Method — Instructions",
         (
             "A word or sentence will appear on screen.\n\n"
             "• You have 2 minutes to memorize it carefully.\n"
             "• After the timer, the word will disappear.\n"
             "• Type what you remember using the gaze keyboard.\n"
-            "• Press  ✔ Save & Next  when done.\n\n"
+            "• Press Save & Next when done.\n\n"
             "Look at the fixation cross  +  before each trial.\n"
             "Press  Esc  at any time to abort."
         )
@@ -1267,35 +1267,26 @@ class TextEntryExperiment(tk.Toplevel):
         cx, cy = self._cx(), self._cy()
         w, h   = self._cw(), self._ch()
 
-        # Decorative dot grid
-        for x in range(0, w, 60):
-            for y in range(0, h, 60):
-                c.create_oval(x-1, y-1, x+1, y+1, fill="#1E1E30", outline="")
-
-        # Glow oval behind title
-        c.create_oval(cx-210, cy-240, cx+210, cy-60,
-                      fill="#1A0A3D", outline=self._C_ACC, width=2)
-
-        c.create_text(cx, cy-155, text="🧪  Text-Entry Experiment",
+        c.create_text(cx, cy-155, text="Text-Entry Experiment",
                       fill=self._C_FG, font=self._F_TITLE, anchor="center")
-        c.create_text(cx, cy-90,
+        c.create_line(cx-250, cy-115, cx+250, cy-115, fill=self._C_DIM, width=1)
+        c.create_text(cx, cy-85,
                       text="Eye-gaze typing  ·  Choose your method below",
                       fill=self._C_DIM, font=self._F_SMALL, anchor="center")
-        c.create_line(cx-250, cy-55, cx+250, cy-55, fill=self._C_ACC, width=1)
 
-        c.create_text(cx, cy-15,
+        c.create_text(cx, cy-40,
                       text="Select Overt or Covert to begin the experiment:",
                       fill=self._C_FG, font=self._F_BODY, anchor="center")
 
         # ── Method buttons ────────────────────────────────────────────────────
         def method_btn(parent, title, sub, color, cmd):
-            outer = tk.Frame(parent, bg=color, padx=2, pady=2, cursor="hand2")
-            inner = tk.Frame(outer, bg="#16082E", padx=28, pady=18)
+            outer = tk.Frame(parent, bg=self._C_DIM, padx=1, pady=1, cursor="hand2")
+            inner = tk.Frame(outer, bg=self._C_BG, padx=28, pady=18)
             inner.pack()
-            lbl_t = tk.Label(inner, text=title, bg="#16082E", fg=color,
+            lbl_t = tk.Label(inner, text=title, bg=self._C_BG, fg=color,
                              font=("Segoe UI", 18, "bold"))
             lbl_t.pack()
-            lbl_s = tk.Label(inner, text=sub, bg="#16082E", fg=self._C_DIM,
+            lbl_s = tk.Label(inner, text=sub, bg=self._C_BG, fg=self._C_DIM,
                              font=self._F_SMALL, wraplength=190, justify="center")
             lbl_s.pack(pady=(6, 0))
             for w in (outer, inner, lbl_t, lbl_s):
@@ -1342,7 +1333,8 @@ class TextEntryExperiment(tk.Toplevel):
 
         if secs == 5:
             c.create_text(cx, cy - 210, text=instr[0],
-                          fill=acc, font=self._F_HEAD, anchor="center")
+                          fill=self._C_FG, font=self._F_HEAD, anchor="center")
+            c.create_line(cx-250, cy-175, cx+250, cy-175, fill=self._C_DIM, width=1)
             c.create_text(cx, cy - 20, text=instr[1],
                           fill=self._C_FG, font=self._F_BODY,
                           anchor="center", justify="center")
@@ -1372,9 +1364,6 @@ class TextEntryExperiment(tk.Toplevel):
             c.create_text(cx, cy - 145,
                           text="Focus on the cross below",
                           fill=self._C_DIM, font=self._F_SMALL, anchor="center")
-            # Coloured ring around the + for polish
-            c.create_oval(cx - 90, cy - 90, cx + 90, cy + 90,
-                          outline=acc, width=2, fill="")
             c.create_text(cx, cy, text="+",
                           fill=self._C_FIX, font=self._F_FIX, anchor="center")
 
@@ -1402,12 +1391,10 @@ class TextEntryExperiment(tk.Toplevel):
         stim   = self._current_stim()
 
         if secs == self.MEMORIZE_SECS:
-            # Badge
-            c.create_rectangle(cx - 90, cy - 280, cx + 90, cy - 250,
-                               fill=self._C_ACC, outline="")
             c.create_text(cx, cy - 265, text="MEMORIZE  —  OVERT",
-                          fill="white", font=("Segoe UI", 11, "bold"),
+                          fill=self._C_DIM, font=("Segoe UI", 11, "bold"),
                           anchor="center")
+            c.create_line(cx-250, cy-240, cx+250, cy-240, fill=self._C_DIM, width=1)
             # Word / sentence (large)
             c.create_text(cx, cy - 130, text=stim,
                           fill=self._C_FG, font=self._F_STIM,
@@ -1426,7 +1413,7 @@ class TextEntryExperiment(tk.Toplevel):
         self._canvas.create_text(
             cx, ch - 55,
             text=f"⏱  {mins}:{secs_r:02d}  remaining",
-            fill="#F59E0B", font=("Segoe UI", 18, "bold"),
+            fill=self._C_DIM, font=("Segoe UI", 18, "bold"),
             tags="timer", anchor="center")
 
         if secs > 0:
@@ -1441,14 +1428,15 @@ class TextEntryExperiment(tk.Toplevel):
         frame = self._use_frame()
 
         # Header
-        hdr = tk.Frame(frame, bg=self._C_ACC, padx=24, pady=14)
+        hdr = tk.Frame(frame, bg=self._C_BG, padx=24, pady=14,
+                       highlightbackground=self._C_DIM, highlightthickness=1)
         hdr.pack(fill="x")
         tk.Label(hdr, text="OVERT  ·  Type from memory",
-                 bg=self._C_ACC, fg="white",
+                 bg=self._C_BG, fg=self._C_FG,
                  font=("Segoe UI", 14, "bold")).pack(side="left")
         tk.Label(hdr,
                  text=f"Trial  {self._idx + 1} / {len(self.STIMULI)}",
-                 bg=self._C_ACC, fg="white",
+                 bg=self._C_BG, fg=self._C_DIM,
                  font=self._F_SMALL).pack(side="right")
 
         # Input row
@@ -1457,11 +1445,11 @@ class TextEntryExperiment(tk.Toplevel):
         tk.Label(inp_row, text="Type what you memorized:",
                  bg=self._C_BG, fg=self._C_DIM, font=self._F_SMALL).pack(anchor="w")
 
-        txt = tk.Text(inp_row, bg="#1C1C2E", fg=self._C_FG,
-                      insertbackground=self._C_ACC,
+        txt = tk.Text(inp_row, bg=self._C_BG, fg=self._C_FG,
+                      insertbackground=self._C_FG,
                       font=("Segoe UI", 20), height=2, wrap="word",
                       relief="flat", padx=14, pady=12,
-                      highlightbackground=self._C_ACC, highlightthickness=2)
+                      highlightbackground=self._C_DIM, highlightthickness=1)
         txt.pack(fill="x", pady=(6, 0))
         txt.focus_set()
 
@@ -1476,9 +1464,9 @@ class TextEntryExperiment(tk.Toplevel):
 
         tk.Button(inp_row, text="  ✔  Save & Next  ",
                   command=_save,
-                  bg=self._C_GRN, fg="white",
-                  activebackground="#14532D", activeforeground="white",
-                  relief="flat", bd=0,
+                  bg=self._C_BG, fg=self._C_FG,
+                  activebackground="#EFEFEF", activeforeground=self._C_FG,
+                  relief="solid", bd=1,
                   font=("Segoe UI", 13, "bold"),
                   padx=18, pady=8, cursor="hand2").pack(anchor="e", pady=(10, 0))
 
@@ -1495,23 +1483,25 @@ class TextEntryExperiment(tk.Toplevel):
         stim  = self._current_stim()
 
         # Header
-        hdr = tk.Frame(frame, bg=self._C_BLU, padx=24, pady=14)
+        hdr = tk.Frame(frame, bg=self._C_BG, padx=24, pady=14,
+                       highlightbackground=self._C_DIM, highlightthickness=1)
         hdr.pack(fill="x")
         tk.Label(hdr, text="COVERT  ·  Type what you see",
-                 bg=self._C_BLU, fg="white",
+                 bg=self._C_BG, fg=self._C_FG,
                  font=("Segoe UI", 14, "bold")).pack(side="left")
         tk.Label(hdr,
                  text=f"Trial  {self._idx + 1} / {len(self.STIMULI)}",
-                 bg=self._C_BLU, fg="white",
+                 bg=self._C_BG, fg=self._C_DIM,
                  font=self._F_SMALL).pack(side="right")
 
         # Permanently visible stimulus
-        stim_row = tk.Frame(frame, bg="#060D1F", pady=18)
+        stim_row = tk.Frame(frame, bg=self._C_BG, pady=18,
+                            highlightbackground=self._C_DIM, highlightthickness=1)
         stim_row.pack(fill="x")
         tk.Label(stim_row, text="Read & type →",
-                 bg="#060D1F", fg=self._C_DIM, font=self._F_SMALL).pack()
+                 bg=self._C_BG, fg=self._C_DIM, font=self._F_SMALL).pack()
         tk.Label(stim_row, text=stim,
-                 bg="#060D1F", fg="#60A5FA", font=self._F_STIM,
+                 bg=self._C_BG, fg=self._C_FG, font=self._F_STIM,
                  wraplength=int(self.winfo_screenwidth() * 0.85),
                  justify="center").pack(pady=(4, 2))
 
@@ -1521,11 +1511,11 @@ class TextEntryExperiment(tk.Toplevel):
         tk.Label(inp_row, text="Your typed response:",
                  bg=self._C_BG, fg=self._C_DIM, font=self._F_SMALL).pack(anchor="w")
 
-        txt = tk.Text(inp_row, bg="#0A1628", fg="#BFDBFE",
-                      insertbackground="#60A5FA",
+        txt = tk.Text(inp_row, bg=self._C_BG, fg=self._C_FG,
+                      insertbackground=self._C_FG,
                       font=("Segoe UI", 20), height=2, wrap="word",
                       relief="flat", padx=14, pady=12,
-                      highlightbackground=self._C_BLU, highlightthickness=2)
+                      highlightbackground=self._C_DIM, highlightthickness=1)
         txt.pack(fill="x", pady=(6, 0))
         txt.focus_set()
 
@@ -1540,9 +1530,9 @@ class TextEntryExperiment(tk.Toplevel):
 
         tk.Button(inp_row, text="  ✔  Save & Next  ",
                   command=_save,
-                  bg=self._C_BLU, fg="white",
-                  activebackground="#1D4ED8", activeforeground="white",
-                  relief="flat", bd=0,
+                  bg=self._C_BG, fg=self._C_FG,
+                  activebackground="#EFEFEF", activeforeground=self._C_FG,
+                  relief="solid", bd=1,
                   font=("Segoe UI", 13, "bold"),
                   padx=18, pady=8, cursor="hand2").pack(anchor="e", pady=(10, 0))
 
@@ -1571,11 +1561,9 @@ class TextEntryExperiment(tk.Toplevel):
         cx, cy = self._cx(), self._cy()
         w, h   = self._cw(), self._ch()
 
-        acc = self._C_ACC if self._method == "overt" else self._C_BLU
-
         c.create_text(cx, 50,
-                      text=f"✅  Experiment Complete  —  {self._method.upper()}",
-                      fill=self._C_GRN, font=self._F_HEAD, anchor="center")
+                      text=f"Experiment Complete  —  {self._method.upper()}",
+                      fill=self._C_FG, font=self._F_HEAD, anchor="center")
         c.create_text(cx, 90,
                       text=f"{len(self._responses)} trial(s) recorded",
                       fill=self._C_DIM, font=self._F_SMALL, anchor="center")
@@ -1584,23 +1572,23 @@ class TextEntryExperiment(tk.Toplevel):
         y0 = 135
         col_s = cx - 320
         col_r = cx + 20
-        c.create_text(col_s, y0, text="STIMULUS",       fill=acc,
-                      font=("Segoe UI", 11, "bold"), anchor="w")
-        c.create_text(col_r, y0, text="YOUR RESPONSE",  fill=acc,
-                      font=("Segoe UI", 11, "bold"), anchor="w")
+        c.create_text(col_s, y0, text="STIMULUS",
+                      fill=self._C_FG, font=("Segoe UI", 11, "bold"), anchor="w")
+        c.create_text(col_r, y0, text="YOUR RESPONSE",
+                      fill=self._C_FG, font=("Segoe UI", 11, "bold"), anchor="w")
         c.create_line(cx - 340, y0 + 20, cx + 340, y0 + 20,
-                      fill=acc, width=1)
+                      fill=self._C_DIM, width=1)
 
         y = y0 + 20
         for i, r in enumerate(self._responses):
             y += 40
-            bg_col = "#1A0A3D" if i % 2 == 0 else "#0F0F1A"
+            bg_col = "#F3F4F6" if i % 2 == 0 else self._C_BG
             c.create_rectangle(cx - 340, y - 14, cx + 340, y + 16,
                                fill=bg_col, outline="")
             c.create_text(col_s, y, text=r["stimulus"] or "—",
                           fill=self._C_FG, font=self._F_SMALL, anchor="w")
             match  = r["typed"].strip().lower() == (r["stimulus"] or "").strip().lower()
-            t_col  = self._C_GRN if match else "#F87171"
+            t_col  = self._C_GRN if match else "#DC2626"
             c.create_text(col_r, y,
                           text=r["typed"] if r["typed"] else "(empty)",
                           fill=t_col, font=self._F_SMALL, anchor="w")
@@ -1609,16 +1597,16 @@ class TextEntryExperiment(tk.Toplevel):
         btns = tk.Frame(c, bg=self._C_BG)
         tk.Button(btns, text="  ↺  Restart  ",
                   command=self._show_intro,
-                  bg=acc, fg="white",
-                  activebackground="#6D28D9", activeforeground="white",
-                  relief="flat", bd=0,
+                  bg=self._C_BG, fg=self._C_FG,
+                  activebackground="#EFEFEF", activeforeground=self._C_FG,
+                  relief="solid", bd=1,
                   font=("Segoe UI", 13, "bold"),
                   padx=16, pady=8, cursor="hand2").pack(side="left", padx=6)
         tk.Button(btns, text="  ✕  Close  ",
                   command=self.destroy,
-                  bg="#1E1E30", fg=self._C_FG,
-                  activebackground="#2D2D50", activeforeground=self._C_FG,
-                  relief="flat", bd=0, font=("Segoe UI", 13),
+                  bg=self._C_BG, fg=self._C_FG,
+                  activebackground="#EFEFEF", activeforeground=self._C_FG,
+                  relief="solid", bd=1, font=("Segoe UI", 13),
                   padx=16, pady=8, cursor="hand2").pack(side="left", padx=6)
 
         btn_y = min(y + 70, h - 60)
