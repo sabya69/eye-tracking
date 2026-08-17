@@ -1121,6 +1121,10 @@ class BrowserWindow(tk.Toplevel):
 
 
 
+
+#Testing part pore changes hoibo eliga  seperate koira rakhsi #
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 #  TEXT-ENTRY EXPERIMENT
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1177,12 +1181,12 @@ class TextEntryExperiment(tk.Toplevel):
         )
     )
     _COVERT_INSTR = (
-        "📋  Covert Method — Instructions",
+        "Covert Method — Instructions",
         (
             "A word or sentence will remain visible on screen.\n\n"
             "• The word / sentence stays visible the whole time.\n"
             "• Type exactly what you see using the gaze keyboard.\n"
-            "• Press  ✔ Save & Next  when done.\n\n"
+            "• Press Save & Next when done.\n\n"
             "Look at the fixation cross  +  before each trial.\n"
             "Press  Esc  at any time to abort."
         )
