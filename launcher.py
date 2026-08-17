@@ -89,6 +89,7 @@ class Launcher(tk.Tk):
         self.modules = [
             ("Eye Tracker", "Calibrate & start gaze tracking",  GREEN, self._start_tracker),
             ("Notepad","Text editor  ·  save / open files", AMBER,  lambda: NotepadWindow(self)),
+            ("Text-Entry Experiment", "Gaze-based text entry  ·  measure typing speed & accuracy", PURPLE, self._launch_text_experiment),
         ]
         
  
@@ -102,17 +103,7 @@ class Launcher(tk.Tk):
             body.grid_columnconfigure(0, weight=1)
         body.grid_rowconfigure(0, weight=1)
 
-        # ── standalone apps ───────────────────────────────────────────────────
-        chrome_card = _AppIcon(wrapper, "Google Chrome", "#4285F4", lambda: BrowserWindow(self, "Google Chrome", "https://www.google.com"))
-        chrome_card.place(relx=0.97, rely=0.95, anchor="se")
-
-        chatting_card = _AppIcon(wrapper, "Chatting", "#10A37F", lambda: ChatWindow(self))
-        chatting_card.place(relx=0.87, rely=0.78, anchor="sw")
-
-        Youtube_card= _AppIcon(wrapper, "YouTube", "#FF0000", lambda: BrowserWindow(self, "YouTube", "https://www.youtube.com"))
-        Youtube_card.place(relx=0.77, rely=0.61, anchor="sw")
-
-        
+             
 
         
 
@@ -177,6 +168,10 @@ class Launcher(tk.Tk):
         except Exception as e:
             self._flash(f"Failed to launch {app_name}")
             print(f"[WARN] Could not launch {app_name}: {e}")
+
+    def _launch_text_experiment(self):
+        self._flash("Opening Text-Entry Experiment…")
+        TextEntryExperiment(self)
 
     # ── tracker control ───────────────────────────────────────────────────────
     def _start_tracker(self):
@@ -1122,6 +1117,46 @@ class BrowserWindow(tk.Toplevel):
             except:
                 pass
         self.destroy()
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  TEXT-ENTRY EXPERIMENT
+# ─────────────────────────────────────────────────────────────────────────────
+class TextEntryExperiment(tk.Toplevel):
+    """Gaze-based text-entry experiment window (stub — wire up logic here)."""
+
+    def __init__(self, master):
+        super().__init__(master)
+        self.title("Text-Entry Experiment")
+        self.configure(bg=BG)
+        self.state("zoomed")
+        self._build()
+
+    def _build(self):
+        # ── header bar ────────────────────────────────────────────────────────
+        hdr = tk.Frame(self, bg=PURPLE, padx=32, pady=20)
+        hdr.pack(fill="x")
+        tk.Label(hdr, text="Text-Entry Experiment",
+                 bg=PURPLE, fg="white", font=FT).pack(side="left")
+        tk.Button(hdr, text="✕ Close", command=self.destroy,
+                  bg=PURPLE, fg="white", activebackground="#6D28D9",
+                  activeforeground="white", relief="flat", bd=0,
+                  font=FB, padx=16, pady=6, cursor="hand2").pack(side="right")
+
+        _sep(self)
+
+        # ── placeholder body ──────────────────────────────────────────────────
+        body = tk.Frame(self, bg=BG)
+        body.pack(fill="both", expand=True)
+
+        tk.Label(body,
+                 text="🧪  Text-Entry Experiment",
+                 bg=BG, fg=PURPLE, font=("Segoe UI", 22, "bold")).pack(pady=(60, 8))
+        tk.Label(body,
+                 text="Gaze-based text entry · measure typing speed & accuracy\n\n"
+                      "Experiment logic will be wired here.",
+                 bg=BG, fg=MUTED, font=FB, justify="center").pack()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
