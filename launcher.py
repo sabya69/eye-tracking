@@ -1143,10 +1143,30 @@ class TextEntryExperiment(tk.Toplevel):
         RESULTS
     """
 
-    # ── Test stimuli (replace with research-paper content later) ─────────────
-    WORDS     = ["water", "help", "food"]
-    SENTENCES = ["my name is sabyasachi"]
-    STIMULI   = WORDS + SENTENCES          # combined trial list
+    # ── Test stimuli — 20 research phrases ────────────────────────────────
+    ALL_PHRASES = [
+        "have a good weekend",
+        "this is a very good idea",
+        "that is very unfortunate",
+        "the weather is very nice today",
+        "I can see the rings on Saturn",
+        "the back yard of our house",
+        "video camera with a zoom lens",
+        "what a monkey sees a monkey will do",
+        "I would like to go home",
+        "please close the window",
+        "the book is on the table",
+        "today is a beautiful day",
+        "I need to finish this work",
+        "the computer is running slowly",
+        "we will meet again tomorrow",
+        "the students are in the classroom",
+        "this computer has a large screen",
+        "I like reading interesting books",
+        "the system is working correctly",
+        "please enter the text carefully",
+    ]
+    TRIALS_PER_SESSION = 2          # phrases randomly selected per session
 
     MEMORIZE_SECS = 15                     # overt: memorization window (15 s for testing)
 
@@ -1203,6 +1223,7 @@ class TextEntryExperiment(tk.Toplevel):
         self._method       = None   # "overt" or "covert"
         self._idx          = 0
         self._responses    = []
+        self._stimuli      = []     # 2 phrases chosen randomly each session
         self._after_id     = None
         self._typing_frame = None
         # ── Per-trial keystroke tracking ───────────────────────────────────────
@@ -1271,7 +1292,7 @@ class TextEntryExperiment(tk.Toplevel):
             fill=self._C_DIM, font=self._F_SMALL, tags=tag)
 
     def _current_stim(self):
-        return self.STIMULI[self._idx] if self._idx < len(self.STIMULI) else None
+        return self._stimuli[self._idx] if self._idx < len(self._stimuli) else None
 
     # ─────────────────────────────────────────────────────────────────────────
     #  PHASE 0 — INTRO  (method selection)
@@ -1335,6 +1356,7 @@ class TextEntryExperiment(tk.Toplevel):
         self._method    = method
         self._idx       = 0
         self._responses = []
+        self._stimuli   = random.sample(self.ALL_PHRASES, self.TRIALS_PER_SESSION)
         self._show_instructions()
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -1377,7 +1399,7 @@ class TextEntryExperiment(tk.Toplevel):
 
         if secs == 5:
             c.create_text(cx, cy - 190,
-                          text=f"Trial  {self._idx + 1}  of  {len(self.STIMULI)}",
+                          text=f"Trial  {self._idx + 1}  of  {len(self._stimuli)}",
                           fill=self._C_DIM, font=self._F_SMALL, anchor="center")
             c.create_text(cx, cy - 145,
                           text="Focus on the cross below",
@@ -1454,7 +1476,7 @@ class TextEntryExperiment(tk.Toplevel):
                  bg=self._C_BG, fg=self._C_FG,
                  font=("Segoe UI", 14, "bold")).pack(side="left")
         tk.Label(hdr,
-                 text=f"Trial  {self._idx + 1} / {len(self.STIMULI)}",
+                 text=f"Trial  {self._idx + 1} / {len(self._stimuli)}",
                  bg=self._C_BG, fg=self._C_DIM,
                  font=self._F_SMALL).pack(side="right")
 
@@ -1541,7 +1563,7 @@ class TextEntryExperiment(tk.Toplevel):
                  bg=self._C_BG, fg=self._C_FG,
                  font=("Segoe UI", 14, "bold")).pack(side="left")
         tk.Label(hdr,
-                 text=f"Trial  {self._idx + 1} / {len(self.STIMULI)}",
+                 text=f"Trial  {self._idx + 1} / {len(self._stimuli)}",
                  bg=self._C_BG, fg=self._C_DIM,
                  font=self._F_SMALL).pack(side="right")
 
@@ -1628,7 +1650,7 @@ class TextEntryExperiment(tk.Toplevel):
     # ─────────────────────────────────────────────────────────────────────────
     def _advance(self):
         self._idx += 1
-        if self._idx < len(self.STIMULI):
+        if self._idx < len(self._stimuli):
             self._show_fixation()   # fixation before every new trial
         else:
             self._save_csv_and_finish()

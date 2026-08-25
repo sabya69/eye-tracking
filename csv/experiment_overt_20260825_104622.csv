@@ -1,0 +1,3 @@
+trial_number,method,stimulus,typed_response,is_correct,trial_start_time,trial_end_time,typing_duration_sec,spacebar_count,backspace_count,char_count,word_count
+1,overt,the weather is very nice today,the weather is very nice today,True,2026-08-25T10:45:10.004219,2026-08-25T10:45:43.726573,33.722,5,3,30,6
+2,overt,today is a beautiful day,today beautifull day,False,2026-08-25T10:46:05.116144,2026-08-25T10:46:22.930291,17.814,2,1,20,3
