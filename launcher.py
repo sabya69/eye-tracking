@@ -1148,7 +1148,7 @@ class TextEntryExperiment(tk.Toplevel):
     SENTENCES = ["my name is sabyasachi"]
     STIMULI   = WORDS + SENTENCES          # combined trial list
 
-    MEMORIZE_SECS = 30                     # overt: memorization window (30 s for testing)
+    MEMORIZE_SECS = 15                     # overt: memorization window (15 s for testing)
 
     # ── Experiment colours (plain white theme) ──────────────────────────────
     _C_BG  = "#FFFFFF"   # white background
