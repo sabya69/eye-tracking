@@ -1767,6 +1767,13 @@ class TextEntryExperiment(tk.Toplevel):
                 writer.writeheader()
                 writer.writerows(self._responses)
             save_ok = True
+
+            # Automatically run latex.py to generate the LaTeX report
+            try:
+                latex_script = os.path.join(base_dir, "latex.py")
+                subprocess.Popen([sys.executable, latex_script, filepath])
+            except Exception as e:
+                print(f"[ERROR] Failed to auto-generate LaTeX: {e}")
         except Exception as exc:
             save_ok  = False
             err_msg  = str(exc)
