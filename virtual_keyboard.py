@@ -157,20 +157,46 @@ class VirtualKeyboard:
         now = time.time()
         for label, x1, y1, x2, y2 in self.key_list:
             hov  = label == self.hovered_key
-            prs  = label == self.last_pressed and now-self.last_press_t < 0.3
+            
+            # Smooth click animation calculation
+            elapsed = now - self.last_press_t
+            progress = max(0.0, min(1.0, 1.0 - (elapsed / 0.3))) if label == self.last_pressed else 0.0
+            prs = progress > 0.0
+            
             spec = label in ("←","SPACE","ENTER","CLEAR","CLOSE")
-            bg   = (0,200,100) if prs else (60,80,140) if hov else (40,40,70) if spec else (35,35,55)
-            cv2.rectangle(img, (x1+2,y1+2), (x2-2,y2-2), bg, -1)
+            
+            # Color and size interpolation
+            if prs:
+                normal_bg = (40,40,70) if spec else (35,35,55)
+                press_bg  = (0,240,120)
+                bg = tuple(int(normal_bg[i] + (press_bg[i] - normal_bg[i]) * progress) for i in range(3))
+                
+                inset = int(4 * progress)
+                rx1, ry1, rx2, ry2 = x1 + 2 + inset, y1 + 2 + inset, x2 - 2 - inset, y2 - 2 - inset
+                
+                normal_fg = (220,230,255)
+                press_fg  = (10,10,10)
+                text_col  = tuple(int(normal_fg[i] + (press_fg[i] - normal_fg[i]) * progress) for i in range(3))
+            else:
+                bg = (60,80,140) if hov else (40,40,70) if spec else (35,35,55)
+                rx1, ry1, rx2, ry2 = x1 + 2, y1 + 2, x2 - 2, y2 - 2
+                text_col  = (220,230,255)
+
+            cv2.rectangle(img, (rx1, ry1), (rx2, ry2), bg, -1)
+            
             if hov and self.dwell_progress > 0:
-                cx2,cy2 = (x1+x2)//2, (y1+y2)//2
+                cx2, cy2 = (x1+x2)//2, (y1+y2)//2
                 r = min(x2-x1, y2-y1)//2-4
-                cv2.ellipse(img, (cx2,cy2), (r,r), -90, 0, int(360*self.dwell_progress), (0,220,255), 3)
-            cv2.rectangle(img, (x1+2,y1+2), (x2-2,y2-2), (0,220,255) if hov else (55,55,80), 1)
-            fs   = 0.55 if len(label)>1 else 0.68
-            tsz  = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, fs, 1)[0]
-            tx   = x1+(x2-x1-tsz[0])//2;  ty = y1+(y2-y1+tsz[1])//2
-            cv2.putText(img, label, (tx,ty), cv2.FONT_HERSHEY_SIMPLEX, fs,
-                        (10,10,10) if prs else (220,230,255), 1, cv2.LINE_AA)
+                cv2.ellipse(img, (cx2, cy2), (r, r), -90, 0, int(360*self.dwell_progress), (0,220,255), 3)
+                
+            border_col = (0,255,100) if prs else (0,220,255) if hov else (55,55,80)
+            cv2.rectangle(img, (rx1, ry1), (rx2, ry2), border_col, 1)
+            
+            fs  = 0.55 if len(label) > 1 else 0.68
+            tsz = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, fs, 1)[0]
+            tx  = rx1 + (rx2 - rx1 - tsz[0]) // 2
+            ty  = ry1 + (ry2 - ry1 + tsz[1]) // 2
+            cv2.putText(img, label, (tx, ty), cv2.FONT_HERSHEY_SIMPLEX, fs, text_col, 1, cv2.LINE_AA)
 
         cv2.putText(img, "Gaze-dwell or LEFT blink  |  ENTER sends to Text Pad  |  K=close",
                     (self.MARGIN, self._canvas_h-6),

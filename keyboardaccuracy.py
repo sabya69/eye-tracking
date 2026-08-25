@@ -484,30 +484,36 @@ class OnScreenKeyboard(tk.Toplevel):
             for key in row_keys:
                 w = self.WIDE.get(key, 1)
                 btn = tk.Button(
-                row_frame,
-                text=key,
-                width=int(w * 3),          # wider keys
-                height=1,                 # taller keys
-                font=("Segoe UI", 14, "bold"),   # bigger text
-                bg=SURFACE, fg=TEXT,
-                activebackground=ACCENT,
-                activeforeground=SURFACE,
-                relief="flat",
-                bd=0,
-                highlightbackground=BORDER,
-                highlightthickness=1,
-                padx=6,
-                pady=10,
-                cursor="hand2",
-                command=lambda k=key: self._press(k)
-)
+                    row_frame,
+                    text=key,
+                    width=int(w * 3),          # wider keys
+                    height=1,                 # taller keys
+                    font=("Segoe UI", 14, "bold"),   # bigger text
+                    bg=SURFACE, fg=TEXT,
+                    activebackground=ACCENT,
+                    activeforeground=SURFACE,
+                    relief="flat",
+                    bd=0,
+                    highlightbackground=BORDER,
+                    highlightthickness=1,
+                    padx=6,
+                    pady=10,
+                    cursor="hand2"
+                )
+                btn.configure(command=lambda k=key, b=btn: self._press(k, b))
                 btn.pack(side="left", padx=2)
 
         # Info label
         tk.Label(pad, text="After Clicking the keys using tracker you can type in notepad",
                  bg=BG, fg=MUTED, font=FS).pack(pady=(6,0))
 
-    def _press(self, key):
+    def _press(self, key, btn_widget=None):
+        if btn_widget:
+            orig_bg = btn_widget.cget("bg")
+            orig_fg = btn_widget.cget("fg")
+            btn_widget.configure(bg="#16A34A", fg="#FFFFFF", relief="sunken")
+            self.after(150, lambda: btn_widget.configure(bg=orig_bg, fg=orig_fg, relief="flat"))
+
         t = self._target
         if key == "⌫":
             # Delete last character

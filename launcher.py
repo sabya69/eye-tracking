@@ -599,9 +599,9 @@ class OnScreenKeyboard(tk.Frame):
                     bd=0,
                     highlightbackground=BORDER,
                     highlightthickness=1,
-                    cursor="hand2",
-                    command=lambda k=key: self._press(k)
+                    cursor="hand2"
                 )
+                btn.configure(command=lambda k=key, b=btn: self._press(k, b))
                 btn.grid(row=0, column=c, sticky="nsew", padx=4)
             row_frame.rowconfigure(0, weight=1)
 
@@ -621,8 +621,9 @@ class OnScreenKeyboard(tk.Frame):
                 bg=SURFACE, fg=TEXT, activebackground=ACCENT,
                 activeforeground=SURFACE, relief="flat", bd=0,
                 highlightbackground=BORDER, highlightthickness=1,
-                cursor="hand2", command=lambda k=text: self._press(k)
+                cursor="hand2"
             )
+            btn.configure(command=lambda k=text, b=btn: self._press(k, b))
             return btn
 
         # ROW 0: NUMBERS
@@ -696,7 +697,13 @@ class OnScreenKeyboard(tk.Frame):
         tk.Label(pad, text="After Clicking the keys using tracker you can type in notepad",
                  bg=SURFACE, fg=MUTED, font=FS).pack(pady=(10,0))
 
-    def _press(self, key):
+    def _press(self, key, btn_widget=None):
+        if btn_widget:
+            orig_bg = btn_widget.cget("bg")
+            orig_fg = btn_widget.cget("fg")
+            btn_widget.configure(bg="#16A34A", fg="#FFFFFF", relief="sunken")
+            self.after(150, lambda: btn_widget.configure(bg=orig_bg, fg=orig_fg, relief="flat"))
+
         t = self._target
         if key == "⌫":
             # Delete last character
