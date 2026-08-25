@@ -1279,6 +1279,7 @@ class TextEntryExperiment(tk.Toplevel):
         self._backspace_count   = 0
         self._first_key_pressed = False
         self._prev_typed_text   = ""
+        self._keystroke_log     = []   # [(char, rel_sec), ...]
 
     def _cx(self): return self._canvas.winfo_width()  // 2 or self.winfo_screenwidth()  // 2
     def _cy(self): return self._canvas.winfo_height() // 2 or self.winfo_screenheight() // 2
@@ -1563,13 +1564,22 @@ class TextEntryExperiment(tk.Toplevel):
             txt.edit_modified(False)
             current = txt.get("1.0", "end-1c")
             prev    = self._prev_typed_text
+            now     = datetime.datetime.now()
             if not self._first_key_pressed and current != prev:
-                self._trial_start_time  = datetime.datetime.now()
+                self._trial_start_time  = now
                 self._first_key_pressed = True
+            rel_time = round((now - self._trial_start_time).total_seconds(), 3) \
+                       if self._trial_start_time else 0.0
             if len(current) > len(prev):
-                self._spacebar_count += current[len(prev):].count(" ")
+                added = current[len(prev):]
+                self._spacebar_count += added.count(" ")
+                for ch in added:
+                    self._keystroke_log.append([ch if ch != " " else "<SP>", rel_time])
             elif len(current) < len(prev):
-                self._backspace_count += len(prev) - len(current)
+                n_del = len(prev) - len(current)
+                self._backspace_count += n_del
+                for _ in range(n_del):
+                    self._keystroke_log.append(["<BS>", rel_time])
             self._prev_typed_text = current
 
         txt.bind("<<Modified>>", _track_changes, add="+")
@@ -1594,6 +1604,7 @@ class TextEntryExperiment(tk.Toplevel):
                 "backspace_count"    : self._backspace_count,
                 "char_count"         : len(typed),
                 "word_count"         : len(typed.split()) if typed else 0,
+                "letter_timestamps"  : json.dumps(self._keystroke_log),
             })
             self._advance()
 
@@ -1662,13 +1673,22 @@ class TextEntryExperiment(tk.Toplevel):
             txt.edit_modified(False)
             current = txt.get("1.0", "end-1c")
             prev    = self._prev_typed_text
+            now     = datetime.datetime.now()
             if not self._first_key_pressed and current != prev:
-                self._trial_start_time  = datetime.datetime.now()
+                self._trial_start_time  = now
                 self._first_key_pressed = True
+            rel_time = round((now - self._trial_start_time).total_seconds(), 3) \
+                       if self._trial_start_time else 0.0
             if len(current) > len(prev):
-                self._spacebar_count += current[len(prev):].count(" ")
+                added = current[len(prev):]
+                self._spacebar_count += added.count(" ")
+                for ch in added:
+                    self._keystroke_log.append([ch if ch != " " else "<SP>", rel_time])
             elif len(current) < len(prev):
-                self._backspace_count += len(prev) - len(current)
+                n_del = len(prev) - len(current)
+                self._backspace_count += n_del
+                for _ in range(n_del):
+                    self._keystroke_log.append(["<BS>", rel_time])
             self._prev_typed_text = current
 
         txt.bind("<<Modified>>", _track_changes, add="+")
@@ -1693,6 +1713,7 @@ class TextEntryExperiment(tk.Toplevel):
                 "backspace_count"    : self._backspace_count,
                 "char_count"         : len(typed),
                 "word_count"         : len(typed.split()) if typed else 0,
+                "letter_timestamps"  : json.dumps(self._keystroke_log),
             })
             self._advance()
 
@@ -1738,7 +1759,7 @@ class TextEntryExperiment(tk.Toplevel):
             "participant_name", "trial_number", "method", "stimulus",
             "typed_response", "is_correct", "trial_start_time", "trial_end_time",
             "typing_duration_sec", "spacebar_count", "backspace_count",
-            "char_count", "word_count",
+            "char_count", "word_count", "letter_timestamps",
         ]
         try:
             with open(filepath, "w", newline="", encoding="utf-8") as f:
