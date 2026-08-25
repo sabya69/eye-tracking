@@ -1,0 +1,5 @@
+trial_number,method,stimulus,typed_response,is_correct,trial_start_time,trial_end_time,typing_duration_sec,spacebar_count,backspace_count,char_count,word_count
+1,overt,water,water,True,2026-08-25T09:31:23.057677,2026-08-25T09:31:29.643054,6.585,0,1,5,1
+2,overt,help,help,True,2026-08-25T09:31:57.928567,2026-08-25T09:32:02.144627,4.216,0,0,4,1
+3,overt,food,food,True,2026-08-25T09:32:28.131337,2026-08-25T09:32:30.658431,2.527,0,0,4,1
+4,overt,my name is sabyasachi,my name is sabyasachi,True,2026-08-25T09:32:53.497252,2026-08-25T09:33:06.424634,12.927,3,0,21,4

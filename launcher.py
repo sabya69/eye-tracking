@@ -1,7 +1,7 @@
 
 import tkinter as tk
 from tkinter import font as tkfont, filedialog
-import subprocess, sys, os, datetime, random, json
+import subprocess, sys, os, datetime, random, json, csv
 
 # ── palette ───────────────────────────────────────────────────────────────────
 BG      = "#F5F6F8"
@@ -1205,6 +1205,12 @@ class TextEntryExperiment(tk.Toplevel):
         self._responses    = []
         self._after_id     = None
         self._typing_frame = None
+        # ── Per-trial keystroke tracking ───────────────────────────────────────
+        self._trial_start_time  = None
+        self._spacebar_count    = 0
+        self._backspace_count   = 0
+        self._first_key_pressed = False
+        self._prev_typed_text   = ""
 
         # Canvas used by display-only phases
         self._canvas = tk.Canvas(self, bg=self._C_BG, highlightthickness=0)
@@ -1243,6 +1249,14 @@ class TextEntryExperiment(tk.Toplevel):
     def _clear(self):
         self._cancel_after()
         self._canvas.delete("all")
+
+    def _reset_trial_tracking(self):
+        """Reset per-trial keystroke counters before each typing phase."""
+        self._trial_start_time  = None
+        self._spacebar_count    = 0
+        self._backspace_count   = 0
+        self._first_key_pressed = False
+        self._prev_typed_text   = ""
 
     def _cx(self): return self._canvas.winfo_width()  // 2 or self.winfo_screenwidth()  // 2
     def _cy(self): return self._canvas.winfo_height() // 2 or self.winfo_screenheight() // 2
@@ -1430,6 +1444,7 @@ class TextEntryExperiment(tk.Toplevel):
     # ─────────────────────────────────────────────────────────────────────────
     def _show_overt_typing(self):
         frame = self._use_frame()
+        self._reset_trial_tracking()
 
         # Header
         hdr = tk.Frame(frame, bg=self._C_BG, padx=24, pady=14,
@@ -1457,12 +1472,43 @@ class TextEntryExperiment(tk.Toplevel):
         txt.pack(fill="x", pady=(6, 0))
         txt.focus_set()
 
+        # ── Keystroke tracking (works for both physical & on-screen keyboard) ──
+        def _track_changes(event=None):
+            if not txt.edit_modified():
+                return
+            txt.edit_modified(False)
+            current = txt.get("1.0", "end-1c")
+            prev    = self._prev_typed_text
+            if not self._first_key_pressed and current != prev:
+                self._trial_start_time  = datetime.datetime.now()
+                self._first_key_pressed = True
+            if len(current) > len(prev):
+                self._spacebar_count += current[len(prev):].count(" ")
+            elif len(current) < len(prev):
+                self._backspace_count += len(prev) - len(current)
+            self._prev_typed_text = current
+
+        txt.bind("<<Modified>>", _track_changes, add="+")
+
         def _save():
-            typed = txt.get("1.0", "end").strip()
+            typed      = txt.get("1.0", "end").strip()
+            end_time   = datetime.datetime.now()
+            start_time = self._trial_start_time
+            duration   = round((end_time - start_time).total_seconds(), 3) \
+                         if start_time else ""
             self._responses.append({
-                "method": "overt",
-                "stimulus": self._current_stim(),
-                "typed": typed
+                "trial_number"       : self._idx + 1,
+                "method"             : "overt",
+                "stimulus"           : self._current_stim(),
+                "typed_response"     : typed,
+                "is_correct"         : typed.strip().lower() == (self._current_stim() or "").strip().lower(),
+                "trial_start_time"   : start_time.isoformat() if start_time else "",
+                "trial_end_time"     : end_time.isoformat(),
+                "typing_duration_sec": duration,
+                "spacebar_count"     : self._spacebar_count,
+                "backspace_count"    : self._backspace_count,
+                "char_count"         : len(typed),
+                "word_count"         : len(typed.split()) if typed else 0,
             })
             self._advance()
 
@@ -1485,6 +1531,7 @@ class TextEntryExperiment(tk.Toplevel):
     def _show_covert_typing(self):
         frame = self._use_frame()
         stim  = self._current_stim()
+        self._reset_trial_tracking()
 
         # Header
         hdr = tk.Frame(frame, bg=self._C_BG, padx=24, pady=14,
@@ -1523,12 +1570,43 @@ class TextEntryExperiment(tk.Toplevel):
         txt.pack(fill="x", pady=(6, 0))
         txt.focus_set()
 
+        # ── Keystroke tracking (works for both physical & on-screen keyboard) ──
+        def _track_changes(event=None):
+            if not txt.edit_modified():
+                return
+            txt.edit_modified(False)
+            current = txt.get("1.0", "end-1c")
+            prev    = self._prev_typed_text
+            if not self._first_key_pressed and current != prev:
+                self._trial_start_time  = datetime.datetime.now()
+                self._first_key_pressed = True
+            if len(current) > len(prev):
+                self._spacebar_count += current[len(prev):].count(" ")
+            elif len(current) < len(prev):
+                self._backspace_count += len(prev) - len(current)
+            self._prev_typed_text = current
+
+        txt.bind("<<Modified>>", _track_changes, add="+")
+
         def _save():
-            typed = txt.get("1.0", "end").strip()
+            typed      = txt.get("1.0", "end").strip()
+            end_time   = datetime.datetime.now()
+            start_time = self._trial_start_time
+            duration   = round((end_time - start_time).total_seconds(), 3) \
+                         if start_time else ""
             self._responses.append({
-                "method": "covert",
-                "stimulus": self._current_stim(),
-                "typed": typed
+                "trial_number"       : self._idx + 1,
+                "method"             : "covert",
+                "stimulus"           : self._current_stim(),
+                "typed_response"     : typed,
+                "is_correct"         : typed.strip().lower() == (self._current_stim() or "").strip().lower(),
+                "trial_start_time"   : start_time.isoformat() if start_time else "",
+                "trial_end_time"     : end_time.isoformat(),
+                "typing_duration_sec": duration,
+                "spacebar_count"     : self._spacebar_count,
+                "backspace_count"    : self._backspace_count,
+                "char_count"         : len(typed),
+                "word_count"         : len(typed.split()) if typed else 0,
             })
             self._advance()
 
@@ -1553,49 +1631,65 @@ class TextEntryExperiment(tk.Toplevel):
         if self._idx < len(self.STIMULI):
             self._show_fixation()   # fixation before every new trial
         else:
-            self._show_results()
+            self._save_csv_and_finish()
 
     # ─────────────────────────────────────────────────────────────────────────
-    #  PHASE 5 — RESULTS
+    #  PHASE 5 — SAVE CSV & FINISH
     # ─────────────────────────────────────────────────────────────────────────
-    def _show_results(self):
+    def _save_csv_and_finish(self):
+        # ── Determine output path ────────────────────────────────────────────
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        csv_dir  = os.path.join(base_dir, "csv")
+        os.makedirs(csv_dir, exist_ok=True)
+
+        ts       = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"experiment_{self._method}_{ts}.csv"
+        filepath = os.path.join(csv_dir, filename)
+
+        # ── Write CSV ────────────────────────────────────────────────────────
+        fieldnames = [
+            "trial_number", "method", "stimulus", "typed_response",
+            "is_correct", "trial_start_time", "trial_end_time",
+            "typing_duration_sec", "spacebar_count", "backspace_count",
+            "char_count", "word_count",
+        ]
+        try:
+            with open(filepath, "w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(self._responses)
+            save_ok = True
+        except Exception as exc:
+            save_ok  = False
+            err_msg  = str(exc)
+
+        # ── Confirmation screen ──────────────────────────────────────────────
         self._use_canvas(); self._clear(); self.update_idletasks()
-
         c  = self._canvas
         cx, cy = self._cx(), self._cy()
-        w, h   = self._cw(), self._ch()
+        h      = self._ch()
 
-        c.create_text(cx, 50,
-                      text=f"Experiment Complete  —  {self._method.upper()}",
-                      fill=self._C_FG, font=self._F_HEAD, anchor="center")
-        c.create_text(cx, 90,
-                      text=f"{len(self._responses)} trial(s) recorded",
-                      fill=self._C_DIM, font=self._F_SMALL, anchor="center")
-
-        # Table header
-        y0 = 135
-        col_s = cx - 320
-        col_r = cx + 20
-        c.create_text(col_s, y0, text="STIMULUS",
-                      fill=self._C_FG, font=("Segoe UI", 11, "bold"), anchor="w")
-        c.create_text(col_r, y0, text="YOUR RESPONSE",
-                      fill=self._C_FG, font=("Segoe UI", 11, "bold"), anchor="w")
-        c.create_line(cx - 340, y0 + 20, cx + 340, y0 + 20,
-                      fill=self._C_DIM, width=1)
-
-        y = y0 + 20
-        for i, r in enumerate(self._responses):
-            y += 40
-            bg_col = "#F3F4F6" if i % 2 == 0 else self._C_BG
-            c.create_rectangle(cx - 340, y - 14, cx + 340, y + 16,
-                               fill=bg_col, outline="")
-            c.create_text(col_s, y, text=r["stimulus"] or "—",
-                          fill=self._C_FG, font=self._F_SMALL, anchor="w")
-            match  = r["typed"].strip().lower() == (r["stimulus"] or "").strip().lower()
-            t_col  = self._C_GRN if match else "#DC2626"
-            c.create_text(col_r, y,
-                          text=r["typed"] if r["typed"] else "(empty)",
-                          fill=t_col, font=self._F_SMALL, anchor="w")
+        if save_ok:
+            c.create_text(cx, cy - 90,
+                          text="✓  Experiment Complete",
+                          fill=self._C_GRN, font=self._F_HEAD, anchor="center")
+            c.create_text(cx, cy - 45,
+                          text=f"{self._method.upper()}  ·  {len(self._responses)} trial(s) saved to CSV",
+                          fill=self._C_DIM, font=self._F_BODY, anchor="center")
+            c.create_text(cx, cy,
+                          text="Saved to:",
+                          fill=self._C_DIM, font=self._F_SMALL, anchor="center")
+            c.create_text(cx, cy + 32,
+                          text=f"csv/{filename}",
+                          fill=self._C_FG, font=("Segoe UI", 13, "bold"), anchor="center")
+        else:
+            c.create_text(cx, cy - 60,
+                          text="⚠  Could not save CSV",
+                          fill="#DC2626", font=self._F_HEAD, anchor="center")
+            c.create_text(cx, cy,
+                          text=err_msg,
+                          fill=self._C_DIM, font=self._F_SMALL, anchor="center",
+                          width=int(self._cw() * 0.7))
 
         # Buttons
         btns = tk.Frame(c, bg=self._C_BG)
@@ -1613,8 +1707,7 @@ class TextEntryExperiment(tk.Toplevel):
                   relief="solid", bd=1, font=("Segoe UI", 13),
                   padx=16, pady=8, cursor="hand2").pack(side="left", padx=6)
 
-        btn_y = min(y + 70, h - 60)
-        c.create_window(cx, btn_y, window=btns, anchor="center")
+        c.create_window(cx, cy + 90, window=btns, anchor="center")
 
 
 
