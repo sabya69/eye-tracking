@@ -1220,12 +1220,13 @@ class TextEntryExperiment(tk.Toplevel):
         self.state("zoomed")
         self.bind("<Escape>", lambda e: self.destroy())
 
-        self._method       = None   # "overt" or "covert"
-        self._idx          = 0
-        self._responses    = []
-        self._stimuli      = []     # 2 phrases chosen randomly each session
-        self._after_id     = None
-        self._typing_frame = None
+        self._method            = None   # "overt" or "covert"
+        self._idx               = 0
+        self._responses         = []
+        self._stimuli           = []     # 2 phrases chosen randomly each session
+        self._participant_name  = ""     # entered on the name screen
+        self._after_id          = None
+        self._typing_frame      = None
         # ── Per-trial keystroke tracking ───────────────────────────────────────
         self._trial_start_time  = None
         self._spacebar_count    = 0
@@ -1237,7 +1238,7 @@ class TextEntryExperiment(tk.Toplevel):
         self._canvas = tk.Canvas(self, bg=self._C_BG, highlightthickness=0)
         self._canvas.pack(fill="both", expand=True)
 
-        self._show_intro()
+        self._show_name_entry()
 
     # ── Internal helpers ──────────────────────────────────────────────────────
     def _cancel_after(self):
@@ -1293,6 +1294,67 @@ class TextEntryExperiment(tk.Toplevel):
 
     def _current_stim(self):
         return self._stimuli[self._idx] if self._idx < len(self._stimuli) else None
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  PHASE –1 — NAME ENTRY
+    # ─────────────────────────────────────────────────────────────────────────
+    def _show_name_entry(self):
+        frame = self._use_frame()
+
+        # Title block
+        title_row = tk.Frame(frame, bg=self._C_BG, pady=28)
+        title_row.pack(fill="x")
+        tk.Label(title_row, text="Text-Entry Experiment",
+                 bg=self._C_BG, fg=self._C_FG,
+                 font=self._F_TITLE).pack()
+        tk.Label(title_row,
+                 text="Enter your name using the eye-gaze keyboard below, then press  Continue",
+                 bg=self._C_BG, fg=self._C_DIM,
+                 font=self._F_SMALL).pack(pady=(8, 0))
+
+        # Name input
+        inp_row = tk.Frame(frame, bg=self._C_BG, padx=40, pady=10)
+        inp_row.pack(fill="x")
+        tk.Label(inp_row, text="Your Name:",
+                 bg=self._C_BG, fg=self._C_DIM, font=self._F_SMALL).pack(anchor="w")
+
+        txt = tk.Text(inp_row, bg=self._C_BG, fg=self._C_FG,
+                      insertbackground=self._C_FG,
+                      font=("Segoe UI", 22), height=2, wrap="word",
+                      relief="flat", padx=14, pady=12,
+                      highlightbackground=self._C_DIM, highlightthickness=1)
+        txt.pack(fill="x", pady=(6, 0))
+        txt.focus_set()
+
+        warn_lbl = tk.Label(inp_row, text="",
+                            bg=self._C_BG, fg="#DC2626", font=self._F_SMALL)
+        warn_lbl.pack(anchor="w", pady=(4, 0))
+
+        def _continue():
+            name = txt.get("1.0", "end").strip()
+            if not name:
+                warn_lbl.config(text="⚠  Please enter your name before continuing.")
+                txt.config(highlightbackground="#DC2626", highlightthickness=2)
+                self.after(2000, lambda: (
+                    warn_lbl.config(text=""),
+                    txt.config(highlightbackground=self._C_DIM, highlightthickness=1)
+                ))
+                return
+            self._participant_name = name
+            self._show_intro()
+
+        tk.Button(inp_row, text="  Continue  →  ",
+                  command=_continue,
+                  bg=self._C_ACC, fg="#FFFFFF",
+                  activebackground="#1d4ed8", activeforeground="#FFFFFF",
+                  relief="flat",
+                  font=("Segoe UI", 13, "bold"),
+                  padx=18, pady=8, cursor="hand2").pack(anchor="e", pady=(12, 0))
+
+        # On-screen keyboard
+        kb = tk.Frame(frame, bg=self._C_BG)
+        kb.pack(fill="both", expand=True, padx=8, pady=4)
+        OnScreenKeyboard(kb, txt, layout="normal", notepad_app=None).pack(fill="both", expand=True)
 
     # ─────────────────────────────────────────────────────────────────────────
     #  PHASE 0 — INTRO  (method selection)
@@ -1519,6 +1581,7 @@ class TextEntryExperiment(tk.Toplevel):
             duration   = round((end_time - start_time).total_seconds(), 3) \
                          if start_time else ""
             self._responses.append({
+                "participant_name"   : self._participant_name,
                 "trial_number"       : self._idx + 1,
                 "method"             : "overt",
                 "stimulus"           : self._current_stim(),
@@ -1617,6 +1680,7 @@ class TextEntryExperiment(tk.Toplevel):
             duration   = round((end_time - start_time).total_seconds(), 3) \
                          if start_time else ""
             self._responses.append({
+                "participant_name"   : self._participant_name,
                 "trial_number"       : self._idx + 1,
                 "method"             : "covert",
                 "stimulus"           : self._current_stim(),
@@ -1664,14 +1728,15 @@ class TextEntryExperiment(tk.Toplevel):
         csv_dir  = os.path.join(base_dir, "csv")
         os.makedirs(csv_dir, exist_ok=True)
 
-        ts       = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"experiment_{self._method}_{ts}.csv"
-        filepath = os.path.join(csv_dir, filename)
+        ts        = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_name = self._participant_name.strip().lower().replace(" ", "_") or "unknown"
+        filename  = f"experiment_{self._method}_{safe_name}_{ts}.csv"
+        filepath  = os.path.join(csv_dir, filename)
 
         # ── Write CSV ────────────────────────────────────────────────────────
         fieldnames = [
-            "trial_number", "method", "stimulus", "typed_response",
-            "is_correct", "trial_start_time", "trial_end_time",
+            "participant_name", "trial_number", "method", "stimulus",
+            "typed_response", "is_correct", "trial_start_time", "trial_end_time",
             "typing_duration_sec", "spacebar_count", "backspace_count",
             "char_count", "word_count",
         ]
@@ -1716,7 +1781,7 @@ class TextEntryExperiment(tk.Toplevel):
         # Buttons
         btns = tk.Frame(c, bg=self._C_BG)
         tk.Button(btns, text="  ↺  Restart  ",
-                  command=self._show_intro,
+                  command=self._show_name_entry,
                   bg=self._C_BG, fg=self._C_FG,
                   activebackground="#EFEFEF", activeforeground=self._C_FG,
                   relief="solid", bd=1,
