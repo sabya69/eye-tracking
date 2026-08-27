@@ -1173,6 +1173,11 @@ class TextEntryExperiment(tk.Toplevel):
         "the system is working correctly",
         "please enter the text carefully",
     ]
+    ALL_WORDS = [
+        "water", "help", "food", "apple", "house", "smile", "table", "chair",
+        "light", "clock", "sugar", "bread", "paper", "music", "river", "beach",
+        "grass", "plant", "green", "happy", "cloud", "storm", "stone", "night"
+    ]
     TRIALS_PER_SESSION = 2          # phrases randomly selected per session
 
     MEMORIZE_SECS = 15                     # overt: memorization window (15 s for testing)
@@ -1426,7 +1431,13 @@ class TextEntryExperiment(tk.Toplevel):
         self._method    = method
         self._idx       = 0
         self._responses = []
-        self._stimuli   = random.sample(self.ALL_PHRASES, self.TRIALS_PER_SESSION)
+        if method == "overt":
+            words = random.sample(self.ALL_WORDS, 2)
+            phrases = random.sample(self.ALL_PHRASES, 2)
+            self._stimuli = words + phrases
+            random.shuffle(self._stimuli)
+        else:
+            self._stimuli   = random.sample(self.ALL_PHRASES, self.TRIALS_PER_SESSION)
         self._show_instructions()
 
     # ─────────────────────────────────────────────────────────────────────────
