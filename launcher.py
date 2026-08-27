@@ -1152,26 +1152,12 @@ class TextEntryExperiment(tk.Toplevel):
 
     # ── Test stimuli — 20 research phrases ────────────────────────────────
     ALL_PHRASES = [
-        "have a good weekend",
-        "this is a very good idea",
-        "that is very unfortunate",
-        "the weather is very nice today",
-        "I can see the rings on Saturn",
-        "the back yard of our house",
-        "video camera with a zoom lens",
-        "what a monkey sees a monkey will do",
-        "I would like to go home",
-        "please close the window",
-        "the book is on the table",
-        "today is a beautiful day",
-        "I need to finish this work",
-        "the computer is running slowly",
-        "we will meet again tomorrow",
-        "the students are in the classroom",
-        "this computer has a large screen",
-        "I like reading interesting books",
-        "the system is working correctly",
-        "please enter the text carefully",
+        "The quick brown fox jumps over the lazy dog.",
+        "Pack my box with five dozen liquor jugs.",
+        "Sphinx of black quartz, judge my vow",
+        "How vexingly quick daft zebras jump!",
+        "The five boxing wizards jump quickly.",
+        "Waltz, bad nymph, for quick jigs vex.",
     ]
     ALL_WORDS = [
         "water", "help", "food", "apple", "house", "smile", "table", "chair",
@@ -1435,7 +1421,6 @@ class TextEntryExperiment(tk.Toplevel):
             words = random.sample(self.ALL_WORDS, 2)
             phrases = random.sample(self.ALL_PHRASES, 2)
             self._stimuli = words + phrases
-            random.shuffle(self._stimuli)
         else:
             self._stimuli   = random.sample(self.ALL_PHRASES, self.TRIALS_PER_SESSION)
         self._show_instructions()
