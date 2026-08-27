@@ -1,0 +1,3 @@
+participant_name,trial_number,method,stimulus,typed_response,is_correct,trial_start_time,trial_end_time,typing_duration_sec,spacebar_count,backspace_count,char_count,word_count,letter_timestamps
+xwr,1,overt,this computer has a large screen,this compu,False,2026-08-27T12:09:45.871217,2026-08-27T12:10:04.129729,18.259,1,2,10,2,"[[""t"", 0.0], [""h"", 1.053], [""i"", 2.461], [""i"", 2.813], [""s"", 5.529], [""<BS>"", 6.871], [""<BS>"", 7.368], [""s"", 8.648], [""<SP>"", 9.932], [""c"", 11.114], [""o"", 12.701], [""m"", 14.295], [""p"", 15.839], [""u"", 16.871]]"
+xwr,2,overt,the system is working correctly,,False,,2026-08-27T12:10:25.489542,,0,0,0,0,[]

@@ -1,0 +1,3 @@
+participant_name,trial_number,method,stimulus,typed_response,is_correct,trial_start_time,trial_end_time,typing_duration_sec,spacebar_count,backspace_count,char_count,word_count,letter_timestamps
+sdb,1,covert,the system is working correctly,the syystr,False,2026-08-27T12:12:37.105364,2026-08-27T12:12:47.574462,10.469,1,0,10,2,"[[""t"", 0.0], [""h"", 0.845], [""e"", 1.926], [""<SP>"", 2.996], [""s"", 4.27], [""y"", 5.143], [""y"", 6.203], [""s"", 7.428], [""t"", 8.447], [""r"", 9.213]]"
+sdb,2,covert,this is a very good idea,yyy,False,2026-08-27T12:12:56.215491,2026-08-27T12:12:58.247063,2.032,0,0,3,1,"[[""y"", 0.0], [""y"", 0.217], [""y"", 0.53]]"
