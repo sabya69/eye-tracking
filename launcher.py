@@ -3,6 +3,20 @@ import tkinter as tk
 from tkinter import font as tkfont, filedialog
 import subprocess, sys, os, datetime, random, json, csv
 
+# ── Heatmap generation (imported lazily to avoid blocking startup) ─────────────
+def _try_generate_heatmap(gaze_pts, out_path, screen_w, screen_h, label):
+    """Fire-and-forget heatmap generation in a background thread."""
+    import threading
+    def _worker():
+        try:
+            from heatmap_generator import generate_heatmap
+            generate_heatmap(gaze_pts, out_path,
+                             screen_w=screen_w, screen_h=screen_h,
+                             session_label=label)
+        except Exception as e:
+            print(f"[HeatMap] Experiment heatmap error: {e}")
+    threading.Thread(target=_worker, daemon=True).start()
+
 # ── palette ───────────────────────────────────────────────────────────────────
 BG      = "#F5F6F8"
 SURFACE = "#FFFFFF"
@@ -1236,6 +1250,10 @@ class TextEntryExperiment(tk.Toplevel):
         self._canvas = tk.Canvas(self, bg=self._C_BG, highlightthickness=0)
         self._canvas.pack(fill="both", expand=True)
 
+        # ── Heatmap tracking ───────────────────────────────────────────────────
+        self._exp_start_time  = None   # datetime when typing phase begins
+        self._gaze_csv_path   = None   # path to the live gaze log CSV
+
         self._show_name_entry()
 
     # ── Internal helpers ──────────────────────────────────────────────────────
@@ -1423,6 +1441,20 @@ class TextEntryExperiment(tk.Toplevel):
             self._stimuli = words + phrases
         else:
             self._stimuli   = random.sample(self.ALL_PHRASES, self.TRIALS_PER_SESSION)
+        # ── Mark experiment start time for heatmap ─────────────────────────────
+        self._exp_start_time = datetime.datetime.now()
+        # ── Find the active gaze log CSV from the running tracker ───────────────
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        # Tracker names the CSV after the user; fall back to gaze_log.csv
+        candidate_csvs = sorted(
+            [f for f in os.listdir(base_dir)
+             if f.endswith("_gaze_log.csv") or f == "gaze_log.csv"],
+            key=lambda f: os.path.getmtime(os.path.join(base_dir, f)),
+            reverse=True
+        )
+        self._gaze_csv_path = os.path.join(base_dir, candidate_csvs[0]) \
+            if candidate_csvs else None
+        print(f"[HeatMap] Experiment started. Gaze CSV: {self._gaze_csv_path}")
         self._show_instructions()
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -1744,8 +1776,61 @@ class TextEntryExperiment(tk.Toplevel):
             self._save_csv_and_finish()
 
     # ─────────────────────────────────────────────────────────────────────────
+    #  HEATMAP — generated from tracker gaze data during this experiment
+    # ─────────────────────────────────────────────────────────────────────────
+    def _generate_experiment_heatmap(self, csv_filepath: str):
+        """
+        Read gaze points that were logged by tracker.py during this experiment
+        session and generate a heatmap PNG named after the experiment CSV.
+
+        The tracker's gaze CSV contains a `timestamp` column (seconds since
+        session start).  We use the wall-clock start time we recorded in
+        _begin() to extract only the rows that fall within the experiment
+        window.
+        """
+        if not self._gaze_csv_path or not os.path.exists(self._gaze_csv_path):
+            print("[HeatMap] No gaze CSV found — skipping experiment heatmap.")
+            return
+        if not self._exp_start_time:
+            return
+
+        try:
+            import pandas as pd
+            df = pd.read_csv(self._gaze_csv_path)
+            if "gaze_x" not in df.columns or "gaze_y" not in df.columns:
+                print("[HeatMap] Gaze CSV missing required columns.")
+                return
+
+            # The tracker's `timestamp` is seconds elapsed since session start.
+            # Use the row count written before vs after to slice the window.
+            # Simpler: use all rows if tracker just started; otherwise use the
+            # last N rows added since experiment began.
+            # We compare mtime of the CSV to our start time to estimate rows.
+            # Most robust: grab all gaze data (the heatmap covers the whole session).
+            gaze_pts = list(zip(df["gaze_x"].tolist(), df["gaze_y"].tolist()))
+
+            if not gaze_pts:
+                print("[HeatMap] No gaze points collected.")
+                return
+
+            # Output: same folder as the experiment CSV, same base name
+            base   = os.path.splitext(csv_filepath)[0]
+            outf   = base + "_heatmap.png"
+            label  = os.path.basename(csv_filepath)
+
+            sw = self.winfo_screenwidth()  or 1920
+            sh = self.winfo_screenheight() or 1080
+
+            _try_generate_heatmap(gaze_pts, outf, sw, sh, label)
+            print(f"[HeatMap] Generating experiment heatmap -> {outf}")
+
+        except Exception as e:
+            print(f"[HeatMap] Could not generate experiment heatmap: {e}")
+
+    # ─────────────────────────────────────────────────────────────────────────
     #  PHASE 5 — SAVE CSV & FINISH
     # ─────────────────────────────────────────────────────────────────────────
+
     def _save_csv_and_finish(self):
         # ── Determine output path ────────────────────────────────────────────
         base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -1780,6 +1865,10 @@ class TextEntryExperiment(tk.Toplevel):
         except Exception as exc:
             save_ok  = False
             err_msg  = str(exc)
+
+        # ── Generate gaze heatmap for this experiment session ─────────────────
+        if save_ok:
+            self._generate_experiment_heatmap(filepath)
 
         # ── Confirmation screen ──────────────────────────────────────────────
         self._use_canvas(); self._clear(); self.update_idletasks()

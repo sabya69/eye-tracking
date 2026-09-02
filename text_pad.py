@@ -35,6 +35,10 @@ class TextPad:
         self._cooldown    = 1.5
         self._gaze_dot    = None   # (x, y) in pad-window pixels, drawn as indicator
         self._vkb         = None
+        # ── Heatmap support ──────────────────────────────────────────────────
+        self.last_saved_path    = None   # path of the most recently saved file
+        self._typing_gaze_pts   = []     # (norm_x, norm_y) collected while typing
+        self._heatmap_pending   = False  # set True after save so tracker can act
 
         # pre-compute button rects  (action, x1, y1, x2, y2)
         total_w = self.PAD_W - 2*self.MARGIN
@@ -84,6 +88,23 @@ class TextPad:
     def save_now(self):
         """Called directly by keyboard shortcut S — always works."""
         self._save()
+
+    def record_gaze(self, norm_x: float, norm_y: float):
+        """Called by tracker each frame when the text pad is visible.
+        Accumulates normalised gaze points for heatmap generation."""
+        if self.visible:
+            self._typing_gaze_pts.append((float(norm_x), float(norm_y)))
+
+    def pop_heatmap_data(self):
+        """Return (gaze_pts, saved_path) and reset the pending flag.
+        Returns None if no heatmap is ready yet."""
+        if not self._heatmap_pending:
+            return None
+        self._heatmap_pending = False
+        pts  = list(self._typing_gaze_pts)
+        path = self.last_saved_path
+        # Keep the gaze list so the final-session heatmap still has all points
+        return pts, path
 
     def update_gaze(self, screen_x: float, screen_y: float):
       
@@ -139,7 +160,10 @@ class TextPad:
             with open(fname, "w", encoding="utf-8") as f:
                 f.write(self.buffer.strip())
             self._flash(f"Saved: {fname}")
-            print(f"[TextPad] Saved → {fname}")
+            print(f"[TextPad] Saved -> {fname}")
+            # ── Signal heatmap generation ─────────────────────────────────
+            self.last_saved_path  = os.path.abspath(fname)
+            self._heatmap_pending = True
         except Exception as e:
             self._flash("Save failed!")
             print(f"[TextPad] Save error: {e}")

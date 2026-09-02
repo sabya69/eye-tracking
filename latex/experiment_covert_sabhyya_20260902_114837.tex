@@ -1,0 +1,163 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[a4paper,landscape,margin=0.55in]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage[table]{xcolor}
+\usepackage{ragged2e}
+\usepackage{helvet}
+
+\renewcommand{\familydefault}{\sfdefault}
+
+% Simple colors
+\definecolor{headergray}{RGB}{235,235,235}
+\definecolor{textgray}{RGB}{80,80,80}
+
+% Column types
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.3}
+
+\begin{document}
+
+% =========================================================
+% TITLE
+% =========================================================
+
+\begin{center}
+    {\Large\bfseries Typing Experiment Data}\\
+    \vspace{2pt}
+    Participant: \textbf{Sabhyya}
+\end{center}
+
+\vspace{0.25cm}
+
+% =========================================================
+% TRIAL PERFORMANCE
+% =========================================================
+
+\noindent
+{\large\bfseries 1. Trial Performance}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.45in}
+    C{0.65in}
+    L{2.35in}
+    L{2.55in}
+    C{0.65in}
+    C{0.65in}
+    C{0.55in}
+    C{0.75in}
+    C{0.55in}
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Method} &
+\textbf{Stimulus} &
+\textbf{Typed Response} &
+\textbf{Correct} &
+\textbf{Time (s)} &
+\textbf{Space} &
+\textbf{Backspace} &
+\textbf{Chars}
+\\
+
+\midrule
+
+1 &
+Covert &
+The quick brown fox jumps over the lazy dog. &
+gtuu &
+No &
+28.882 &
+0 &
+1 &
+4
+\\
+
+2 &
+Covert &
+Sphinx of black quartz, judge my vow &
+sphinx of black quartz, judge my vow &
+Yes &
+245.973 &
+6 &
+14 &
+36
+\\
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vspace{0.35cm}
+
+% =========================================================
+% KEYSTROKE TIMESTAMPS
+% =========================================================
+
+\noindent
+{\large\bfseries 2. Keystroke Timestamps}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.55in}
+    X
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Keystroke Timestamps (seconds)}
+\\
+
+\midrule
+
+1 &
+\begin{tabular}[t]{@{}l@{}}
+6:0.000,\ BS:4.539,\ g:19.454,\ t:20.288,\ u:24.324,\ u:25.082
+\end{tabular}
+\\[0.12cm]
+
+2 &
+\begin{tabular}[t]{@{}l@{}}
+c:0.000,\ BS:5.148,\ s:13.610,\ p:18.210,\ h:22.825,\ i:25.777,\ n:29.263,\ 
+:32.044\\
+BS:39.836,\ x:47.762,\ SP:52.174,\ o:55.674,\ f:59.913,\ g:60.961,\ BS:67.545,\ SP:71.367\\
+b:75.464,\ l:78.671,\ a:85.046,\ c:88.401,\ k:92.302,\ SP:95.644,\ q:98.800,\ u:102.618\\
+h:103.383,\ s:104.976,\ BS:112.291,\ BS:114.481,\ a:121.999,\ a:122.878,\ BS:127.465,\ e:129.873\\
+BS:133.839,\ r:137.638,\ t:139.667,\ z:143.369,\ ,:149.699,\ SP:152.361,\ j:155.965,\ u:158.140\\
+d:162.287,\ g:166.179,\ s:167.939,\ BS:172.523,\ w:176.341,\ y:177.957,\ [:182.696,\ BS:185.499\\
+BS:186.727,\ BS:187.963,\ e:194.133,\ b:196.048,\ BS:200.913,\ SP:204.242,\ m:206.396,\ y:212.463\\
+SP:215.401,\ v:218.862,\ o:223.212,\ q:226.797,\ 2:227.618,\ BS:232.473,\ BS:234.937,\ w:239.293
+\end{tabular}
+\\[0.12cm]
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vfill
+
+% =========================================================
+% SIMPLE FOOTER
+% =========================================================
+
+\noindent
+\textbf{Participant:} Sabhyya
+\hfill
+\textbf{Total Trials:} 2
+\hfill
+\textbf{Correct Trials:} 1/2
+
+\end{document}

@@ -33,6 +33,7 @@ except ImportError:
 from gaze_cursor      import GazeCursor
 from virtual_keyboard import VirtualKeyboard
 from text_pad         import TextPad
+from heatmap_generator import generate_heatmap   # <-- heatmap support
 
 # ============================================================================ #
 #  WINDOW NAME  (single source of truth -- change here only)
@@ -599,6 +600,9 @@ class AttentionTracker:
                 # gaze cursor overlay
                 self.gaze_cursor.update(gx, gy)
 
+                # -- Record gaze for text-pad heatmap (always, uses norm coords)
+                self.pad.record_gaze(gx, gy)
+
                 self.log_rows.append([
                     round(ts,4), round(gx,5), round(gy,5),
                     blink_flag, self.gaze_dir, self.head_status,
@@ -635,6 +639,21 @@ class AttentionTracker:
                 self.vkb.render()
                 self.pad.render()
 
+            # -- Heatmap: generate immediately after each save ----------------
+            hm_data = self.pad.pop_heatmap_data()
+            if hm_data is not None:
+                hm_pts, hm_path = hm_data
+                if hm_pts and hm_path:
+                    out_path = os.path.splitext(hm_path)[0] + "_heatmap.png"
+                    try:
+                        generate_heatmap(
+                            hm_pts, out_path,
+                            screen_w=self.screen_w, screen_h=self.screen_h,
+                            session_label=os.path.basename(hm_path),
+                        )
+                    except Exception as _e:
+                        print(f"[HeatMap] Error: {_e}")
+
             # -- Key handling ------------------------------------------------ #
             key = cv2.waitKey(1) & 0xFF
             if key == 27:
@@ -661,7 +680,44 @@ class AttentionTracker:
         self._save_csv()
         self._update_stats()
         self._session_summary()
+        # -- Generate end-of-session heatmap from any unsaved typing gaze -----
+        self._generate_session_heatmap()
         self._dashboard()
+
+    # =========================================================================
+    #  HEATMAP  (end-of-session fallback)
+    # =========================================================================
+    def _generate_session_heatmap(self):
+        """Generate a heatmap from typing-session gaze points at end of session.
+        Only runs if the text pad was used and had gaze data accumulated.
+        Named after the saved typed-text file, or a timestamped fallback."""
+        pts = list(self.pad._typing_gaze_pts)
+        if not pts:
+            return   # user never opened the text pad
+
+        saved_path = self.pad.last_saved_path
+        if saved_path:
+            base_name  = os.path.splitext(saved_path)[0]
+            out_path   = base_name + "_heatmap.png"
+            label      = os.path.basename(saved_path)
+        else:
+            # No explicit save during session — use timestamped fallback
+            ts_str    = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            out_path  = f"typed_text_{ts_str}_heatmap.png"
+            label     = f"Unsaved session  {ts_str}"
+
+        # Skip if we already wrote this exact file from pop_heatmap_data()
+        if os.path.exists(out_path):
+            return
+
+        try:
+            generate_heatmap(
+                pts, out_path,
+                screen_w=self.screen_w, screen_h=self.screen_h,
+                session_label=label,
+            )
+        except Exception as e:
+            print(f"[HeatMap] Session heatmap error: {e}")
 
     # =========================================================================
     #  USAGE STATS

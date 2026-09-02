@@ -1,0 +1,162 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[a4paper,landscape,margin=0.55in]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage[table]{xcolor}
+\usepackage{ragged2e}
+\usepackage{helvet}
+
+\renewcommand{\familydefault}{\sfdefault}
+
+% Simple colors
+\definecolor{headergray}{RGB}{235,235,235}
+\definecolor{textgray}{RGB}{80,80,80}
+
+% Column types
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.3}
+
+\begin{document}
+
+% =========================================================
+% TITLE
+% =========================================================
+
+\begin{center}
+    {\Large\bfseries Typing Experiment Data}\\
+    \vspace{2pt}
+    Participant: \textbf{Errr}
+\end{center}
+
+\vspace{0.25cm}
+
+% =========================================================
+% TRIAL PERFORMANCE
+% =========================================================
+
+\noindent
+{\large\bfseries 1. Trial Performance}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.45in}
+    C{0.65in}
+    L{2.35in}
+    L{2.55in}
+    C{0.65in}
+    C{0.65in}
+    C{0.55in}
+    C{0.75in}
+    C{0.55in}
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Method} &
+\textbf{Stimulus} &
+\textbf{Typed Response} &
+\textbf{Correct} &
+\textbf{Time (s)} &
+\textbf{Space} &
+\textbf{Backspace} &
+\textbf{Chars}
+\\
+
+\midrule
+
+1 &
+Covert &
+Pack my box with five dozen liquor jugs. &
+pack my  box woth five dozen liquor jugs &
+No &
+55.730 &
+8 &
+3 &
+40
+\\
+
+2 &
+Covert &
+How vexingly quick daft zebras jump! &
+how vexingly quivk daft &
+No &
+20.225 &
+3 &
+0 &
+23
+\\
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vspace{0.35cm}
+
+% =========================================================
+% KEYSTROKE TIMESTAMPS
+% =========================================================
+
+\noindent
+{\large\bfseries 2. Keystroke Timestamps}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.55in}
+    X
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Keystroke Timestamps (seconds)}
+\\
+
+\midrule
+
+1 &
+\begin{tabular}[t]{@{}l@{}}
+p:0.000,\ a:1.057,\ c:2.601,\ k:3.593,\ SP:4.737,\ m:7.984,\ y:8.777,\ SP:10.672\\
+SP:11.641,\ b:12.249,\ o:13.032,\ o:13.626,\ x:14.537,\ BS:15.681,\ BS:16.273,\ x:17.554\\
+SP:19.513,\ w:20.560,\ o:21.648,\ t:23.911,\ h:24.672,\ SP:26.096,\ f:27.238,\ i:28.960\\
+v:30.031,\ e:30.760,\ SP:31.521,\ d:32.600,\ o:33.463,\ z:35.399,\ e:36.319,\ n:38.287\\
+SP:40.304,\ l:41.743,\ BS:43.032,\ l:43.824,\ i:44.640,\ q:46.761,\ u:47.840,\ o:48.504\\
+r:49.551,\ SP:50.993,\ j:51.841,\ u:52.953,\ g:53.906,\ s:54.770
+\end{tabular}
+\\[0.12cm]
+
+2 &
+\begin{tabular}[t]{@{}l@{}}
+h:0.000,\ o:0.640,\ w:2.024,\ SP:3.256,\ v:4.135,\ e:4.928,\ x:6.631,\ i:7.487\\
+n:8.087,\ g:8.823,\ l:9.408,\ y:10.200,\ SP:11.200,\ q:12.336,\ u:13.240,\ i:13.632\\
+v:14.273,\ k:15.791,\ SP:16.879,\ d:17.553,\ a:18.369,\ f:19.064,\ t:19.449
+\end{tabular}
+\\[0.12cm]
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vfill
+
+% =========================================================
+% SIMPLE FOOTER
+% =========================================================
+
+\noindent
+\textbf{Participant:} Errr
+\hfill
+\textbf{Total Trials:} 2
+\hfill
+\textbf{Correct Trials:} 0/2
+
+\end{document}
