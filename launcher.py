@@ -1814,8 +1814,10 @@ class TextEntryExperiment(tk.Toplevel):
                 return
 
             # Output: same folder as the experiment CSV, same base name
-            base   = os.path.splitext(csv_filepath)[0]
-            outf   = base + "_heatmap.png"
+            hm_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "heatmaps")
+            os.makedirs(hm_dir, exist_ok=True)
+            base   = os.path.basename(os.path.splitext(csv_filepath)[0])
+            outf   = os.path.join(hm_dir, base + "_heatmap.png")
             label  = os.path.basename(csv_filepath)
 
             sw = self.winfo_screenwidth()  or 1920

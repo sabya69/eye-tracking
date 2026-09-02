@@ -644,7 +644,9 @@ class AttentionTracker:
             if hm_data is not None:
                 hm_pts, hm_path = hm_data
                 if hm_pts and hm_path:
-                    out_path = os.path.splitext(hm_path)[0] + "_heatmap.png"
+                    hm_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "heatmaps")
+                    os.makedirs(hm_dir, exist_ok=True)
+                    out_path = os.path.join(hm_dir, os.path.basename(os.path.splitext(hm_path)[0]) + "_heatmap.png")
                     try:
                         generate_heatmap(
                             hm_pts, out_path,
@@ -696,14 +698,16 @@ class AttentionTracker:
             return   # user never opened the text pad
 
         saved_path = self.pad.last_saved_path
+        hm_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "heatmaps")
+        os.makedirs(hm_dir, exist_ok=True)
         if saved_path:
-            base_name  = os.path.splitext(saved_path)[0]
-            out_path   = base_name + "_heatmap.png"
+            base_name  = os.path.basename(os.path.splitext(saved_path)[0])
+            out_path   = os.path.join(hm_dir, base_name + "_heatmap.png")
             label      = os.path.basename(saved_path)
         else:
             # No explicit save during session — use timestamped fallback
             ts_str    = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            out_path  = f"typed_text_{ts_str}_heatmap.png"
+            out_path  = os.path.join(hm_dir, f"typed_text_{ts_str}_heatmap.png")
             label     = f"Unsaved session  {ts_str}"
 
         # Skip if we already wrote this exact file from pop_heatmap_data()
