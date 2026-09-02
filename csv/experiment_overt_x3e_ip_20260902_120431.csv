@@ -1,0 +1,5 @@
+participant_name,trial_number,method,stimulus,typed_response,is_correct,trial_start_time,trial_end_time,typing_duration_sec,spacebar_count,backspace_count,char_count,word_count,letter_timestamps
+x3e ip,1,overt,stone,,False,2026-09-02T12:02:54.719607,2026-09-02T12:03:16.827912,22.108,0,7,0,0,"[[""x"", 0.0], [""d"", 1.844], [""h"", 2.821], [""p"", 5.094], [""<BS>"", 7.458], [""<BS>"", 8.694], [""<BS>"", 9.957], [""<BS>"", 11.17], [""-"", 11.917], [""y"", 13.327], [""<BS>"", 16.215], [""<BS>"", 17.426], [""o"", 18.818], [""<BS>"", 21.78]]"
+x3e ip,2,overt,music,,False,,2026-09-02T12:03:38.423477,,0,0,0,0,[]
+x3e ip,3,overt,How vexingly quick daft zebras jump!,,False,,2026-09-02T12:04:05.023173,,0,0,0,0,[]
+x3e ip,4,overt,"Waltz, bad nymph, for quick jigs vex.",,False,,2026-09-02T12:04:31.686392,,0,0,0,0,[]

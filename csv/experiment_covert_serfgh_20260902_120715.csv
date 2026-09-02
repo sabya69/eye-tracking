@@ -1,0 +1,3 @@
+participant_name,trial_number,method,stimulus,typed_response,is_correct,trial_start_time,trial_end_time,typing_duration_sec,spacebar_count,backspace_count,char_count,word_count,letter_timestamps
+serfgh,1,covert,"Sphinx of black quartz, judge my vow",gt,False,2026-09-02T12:06:50.115050,2026-09-02T12:07:06.564208,16.449,0,0,2,1,"[[""g"", 0.0], [""t"", 6.665]]"
+serfgh,2,covert,The quick brown fox jumps over the lazy dog.,,False,,2026-09-02T12:07:15.389629,,0,0,0,0,[]
