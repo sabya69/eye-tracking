@@ -263,11 +263,8 @@ class AttentionTracker:
                    ("BOTTOM-LEFT",(0.05,0.92)),("BOTTOM-RIGHT",(0.95,0.92))]
         all_gx, all_gy = [], []
         for label, (tx,ty) in corners:
-            buffer = []
-            dwell_start = None
-            DWELL_REQ = 1.25 # 1.25 seconds of stable gaze needed
-            
-            while True:
+            t_end = time.time() + 2.0
+            while time.time() < t_end:
                 ok, frame = self.cap.read()
                 if not ok: continue
                 frame = cv2.flip(frame, 1)
@@ -275,55 +272,27 @@ class AttentionTracker:
                 ov = frame.copy()
                 cv2.rectangle(ov, (0,0), (w,h), (20,20,20), -1)
                 cv2.addWeighted(ov, 0.5, frame, 0.5, 0, frame)
-                cv2.putText(frame, f"Stare at {label} to confirm", (w//2-220,h//2),
+                cv2.putText(frame, f"Look at  {label}", (w//2-180,h//2),
                             cv2.FONT_HERSHEY_DUPLEX, 0.95, (0,220,255), 2)
                 dx, dy = int(tx*w), int(ty*h)
                 cv2.circle(frame, (dx,dy), 18, (0,255,0), -1)
-                
+                cv2.circle(frame, (dx,dy), 22, (255,255,255), 2)
+                frac = (t_end-time.time())/2.0
+                cv2.ellipse(frame, (dx,dy), (30,30), -90, 0, int(360*(1-frac)), (0,220,100), 2)
+                cv2.imshow(WIN, frame)
+                if cv2.waitKey(1) & 0xFF == 27: return
+
                 rgb    = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 mp_img = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
                 res    = self.detector.detect_for_video(mp_img, int(time.time()*1000))
-                
                 if res.face_landmarks:
                     lm = res.face_landmarks[0]
                     lgx = (lm[self.LEFT_IRIS[0]].x  + lm[self.LEFT_IRIS[2]].x)  / 2
                     rgx = (lm[self.RIGHT_IRIS[0]].x + lm[self.RIGHT_IRIS[2]].x) / 2
                     lgy = (lm[self.LEFT_IRIS[0]].y  + lm[self.LEFT_IRIS[2]].y)  / 2
                     rgy = (lm[self.RIGHT_IRIS[0]].y + lm[self.RIGHT_IRIS[2]].y) / 2
-                    gx = (lgx+rgx)/2
-                    gy = (lgy+rgy)/2
-                    
-                    buffer.append((gx, gy))
-                    if len(buffer) > 20:
-                        buffer.pop(0)
-                        
-                    if len(buffer) == 20:
-                        std_x = np.std([p[0] for p in buffer])
-                        std_y = np.std([p[1] for p in buffer])
-                        
-                        # If eyes are relatively stable
-                        if std_x < 0.005 and std_y < 0.005:
-                            if dwell_start is None:
-                                dwell_start = time.time()
-                            dwell_time = time.time() - dwell_start
-                            
-                            frac = min(1.0, dwell_time / DWELL_REQ)
-                            cv2.ellipse(frame, (dx,dy), (30,30), -90, 0, int(360*frac), (0,220,100), 2)
-                            
-                            if dwell_time >= DWELL_REQ:
-                                all_gx.extend([p[0] for p in buffer])
-                                all_gy.extend([p[1] for p in buffer])
-                                break # Advance to next corner
-                        else:
-                            dwell_start = None
-                            cv2.circle(frame, (dx,dy), 22, (255,255,255), 2)
-                    else:
-                        cv2.circle(frame, (dx,dy), 22, (255,255,255), 2)
-                else:
-                    cv2.circle(frame, (dx,dy), 22, (255,255,255), 2)
-                    
-                cv2.imshow(WIN, frame)
-                if cv2.waitKey(1) & 0xFF == 27: return
+                    all_gx.append((lgx+rgx)/2)
+                    all_gy.append((lgy+rgy)/2)
 
         if len(all_gx) > 20:
             self.gaze_calib = [
