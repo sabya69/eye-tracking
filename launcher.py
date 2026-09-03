@@ -1194,7 +1194,7 @@ class TextEntryExperiment(tk.Toplevel):
     # ── Fonts ─────────────────────────────────────────────────────────────────
     _F_TITLE = ("Segoe UI", 32, "bold")
     _F_HEAD  = ("Segoe UI", 22, "bold")
-    _F_STIM  = ("Segoe UI", 52, "bold")   # word/sentence display
+    _F_STIM  = ("Segoe UI", 36, "bold")   # word/sentence display
     _F_BODY  = ("Segoe UI", 15)
     _F_SMALL = ("Segoe UI", 12)
     _F_FIX   = ("Segoe UI", 120, "bold")
@@ -1677,7 +1677,7 @@ class TextEntryExperiment(tk.Toplevel):
                  font=self._F_SMALL).pack(side="right")
 
         # Permanently visible stimulus
-        stim_row = tk.Frame(frame, bg=self._C_BG, pady=18,
+        stim_row = tk.Frame(frame, bg=self._C_BG, pady=8,
                             highlightbackground=self._C_DIM, highlightthickness=1)
         stim_row.pack(fill="x")
         tk.Label(stim_row, text="Read & type →",
@@ -1685,10 +1685,10 @@ class TextEntryExperiment(tk.Toplevel):
         tk.Label(stim_row, text=stim,
                  bg=self._C_BG, fg=self._C_FG, font=self._F_STIM,
                  wraplength=int(self.winfo_screenwidth() * 0.85),
-                 justify="center").pack(pady=(4, 2))
+                 justify="center").pack(pady=(2, 0))
 
         # Input row
-        inp_row = tk.Frame(frame, bg=self._C_BG, padx=32, pady=10)
+        inp_row = tk.Frame(frame, bg=self._C_BG, padx=32, pady=4)
         inp_row.pack(fill="x")
         tk.Label(inp_row, text="Your typed response:",
                  bg=self._C_BG, fg=self._C_DIM, font=self._F_SMALL).pack(anchor="w")
@@ -1696,9 +1696,9 @@ class TextEntryExperiment(tk.Toplevel):
         txt = tk.Text(inp_row, bg=self._C_BG, fg=self._C_FG,
                       insertbackground=self._C_FG,
                       font=("Segoe UI", 20), height=2, wrap="word",
-                      relief="flat", padx=14, pady=12,
+                      relief="flat", padx=14, pady=8,
                       highlightbackground=self._C_DIM, highlightthickness=1)
-        txt.pack(fill="x", pady=(6, 0))
+        txt.pack(fill="x", pady=(2, 0))
         txt.focus_set()
 
         # ── Keystroke tracking (works for both physical & on-screen keyboard) ──
