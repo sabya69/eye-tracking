@@ -1180,7 +1180,7 @@ class TextEntryExperiment(tk.Toplevel):
     ]
     TRIALS_PER_SESSION = 2          # phrases randomly selected per session
 
-    MEMORIZE_SECS = 15                     # overt: memorization window (15 s for testing)
+    MEMORIZE_SECS = 900                    # overt: memorization window (15 mins)
 
     # ── Experiment colours (plain white theme) ──────────────────────────────
     _C_BG  = "#FFFFFF"   # white background
@@ -1204,7 +1204,7 @@ class TextEntryExperiment(tk.Toplevel):
         "Overt Method — Instructions",
         (
             "A word or sentence will appear on screen.\n\n"
-            "• You have 2 minutes to memorize it carefully.\n"
+            "• You have 15 minutes to memorize it carefully.\n"
             "• After the timer, the word will disappear.\n"
             "• Type what you remember using the gaze keyboard.\n"
             "• Press Save & Next when done.\n\n"
