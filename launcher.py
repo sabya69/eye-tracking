@@ -58,6 +58,9 @@ class Launcher(tk.Tk):
 
         # ── Fullscreen ────────────────────────────────────────────────────────
         self.resizable(True, True)
+        self.attributes('-fullscreen', True)
+        self.bind("<Escape>", lambda e: self.attributes('-fullscreen', False))
+        self.bind("<F11>", lambda e: self.attributes('-fullscreen', not self.attributes('-fullscreen')))
         self._proc = None
         self._build()
         self._tick()
@@ -229,7 +232,7 @@ class Launcher(tk.Tk):
     def _restore_ui(self):
         self.attributes('-alpha', 1.0)
         self.deiconify()
-        self.state("zoomed")
+        self.attributes('-fullscreen', True)
         self.lift()
         self.attributes('-topmost', True)
         self.after(100, lambda: self.attributes('-topmost', False))
