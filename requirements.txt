@@ -1,8 +1,8 @@
-opencv-python==4.9.0.80
-mediapipe==0.10.14
-numpy==1.26.4
-pandas==2.2.2
-seaborn==0.13.2
-matplotlib==3.8.4
+opencv-python
+mediapipe
+numpy
+pandas
+seaborn
+matplotlib
 scipy
-tkwebview2
+tkwebview2
