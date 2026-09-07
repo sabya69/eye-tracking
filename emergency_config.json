@@ -1,0 +1,85 @@
+{
+    "emergency_contact": "6009671358",
+    "phrases": [
+        {
+            "text": "I need immediate help!",
+            "category": "green"
+        },
+        {
+            "text": "Please call emergency services!",
+            "category": "green"
+        },
+        {
+            "text": "I am in severe pain.",
+            "category": "green"
+        },
+        {
+            "text": "I feel dizzy / unwell.",
+            "category": "green"
+        },
+        {
+            "text": "Please bring me water.",
+            "category": "green"
+        },
+        {
+            "text": "I need my medication.",
+            "category": "green"
+        },
+        {
+            "text": "Please adjust my position.",
+            "category": "green"
+        },
+        {
+            "text": "I need to go to the bathroom.",
+            "category": "green"
+        },
+        {
+            "text": "Please call my family.",
+            "category": "green"
+        },
+        {
+            "text": "I am okay, don't worry.",
+            "category": "green"
+        },
+        {
+            "text": "It's good to see you.",
+            "category": "green"
+        },
+        {
+            "text": "Excuse me.",
+            "category": "green"
+        },
+        {
+            "text": "Yes",
+            "category": "orange"
+        },
+        {
+            "text": "No",
+            "category": "orange"
+        },
+        {
+            "text": "Maybe",
+            "category": "orange"
+        },
+        {
+            "text": "Of course",
+            "category": "orange"
+        },
+        {
+            "text": "Please",
+            "category": "orange"
+        },
+        {
+            "text": "Thank you",
+            "category": "orange"
+        },
+        {
+            "text": "Why?",
+            "category": "orange"
+        },
+        {
+            "text": "Why not?",
+            "category": "orange"
+        }
+    ]
+}
