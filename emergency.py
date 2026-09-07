@@ -4,8 +4,16 @@ import json
 import time
 import threading
 import subprocess
+import urllib.request
+import urllib.parse
 import tkinter as tk
 from tkinter import messagebox, font as tkfont, simpledialog
+
+try:
+    import winsound
+    HAS_WINSOUND = True
+except ImportError:
+    HAS_WINSOUND = False
 
 # ── Color Palette & Styles (Light Mode / White Theme AAC Layout) ─────────────
 BG_COLOR       = "#F8FAFC"   # Clean light background
@@ -31,6 +39,11 @@ LOG_FILE    = os.path.join(os.path.dirname(os.path.abspath(__file__)), "emergenc
 # ── Default Emergency Configuration ─────────────────────────────────────────
 DEFAULT_CONFIG = {
     "emergency_contact": "+1 (555) 019-2831",
+    "dispatch_channel": "simulation",  # 'simulation', 'twilio', 'webhook'
+    "twilio_account_sid": "",
+    "twilio_auth_token": "",
+    "twilio_from_number": "",
+    "webhook_url": "",
     "phrases": [
         {"text": "I need immediate help!", "category": "green"},
         {"text": "Please call emergency services!", "category": "green"},
@@ -62,6 +75,9 @@ def load_config():
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 if "emergency_contact" in data and "phrases" in data:
+                    for k, v in DEFAULT_CONFIG.items():
+                        if k not in data:
+                            data[k] = v
                     return data
         except Exception as e:
             print(f"[Emergency] Error loading config: {e}")
@@ -99,6 +115,163 @@ def speak_text(text):
                 print(f"[TTS Fallback Error]: {e}")
 
     threading.Thread(target=_run_tts, daemon=True).start()
+
+
+def play_alarm_sound():
+    """Play loud emergency alarm sound."""
+    def _alarm():
+        try:
+            if HAS_WINSOUND:
+                for _ in range(3):
+                    winsound.Beep(2500, 400)
+                    time.sleep(0.1)
+        except Exception:
+            pass
+    threading.Thread(target=_alarm, daemon=True).start()
+
+
+def dispatch_real_phone_signal(contact_num, message_text, config_data):
+    """Dispatches emergency signal via Twilio, Webhook, or Local Simulation."""
+    channel = config_data.get("dispatch_channel", "simulation")
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+
+    # Always log locally
+    log_entry = f"[{timestamp}] [Channel: {channel}] TO: {contact_num} | MESSAGE: {message_text}\n"
+    try:
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(log_entry)
+    except Exception as e:
+        print(f"[Log Write Error]: {e}")
+
+    play_alarm_sound()
+
+    status_msg = f"Alert logged locally for {contact_num}."
+
+    if channel == "twilio":
+        sid = config_data.get("twilio_account_sid", "").strip()
+        auth = config_data.get("twilio_auth_token", "").strip()
+        from_num = config_data.get("twilio_from_number", "").strip()
+
+        if sid and auth and from_num:
+            try:
+                import base64
+                url = f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json"
+                payload = urllib.parse.urlencode({
+                    "From": from_num,
+                    "To": contact_num,
+                    "Body": f"🚨 EMERGENCY ALERT: {message_text}"
+                }).encode("utf-8")
+                req = urllib.request.Request(url, data=payload, method="POST")
+                creds = base64.b64encode(f"{sid}:{auth}".encode("utf-8")).decode("utf-8")
+                req.add_header("Authorization", f"Basic {creds}")
+
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    if resp.status in (200, 201):
+                        status_msg = f"📱 Real SMS sent to {contact_num} via Twilio!"
+            except Exception as e:
+                status_msg = f"Twilio SMS Failed: {e}"
+
+    elif channel == "webhook":
+        wh_url = config_data.get("webhook_url", "").strip()
+        if wh_url:
+            try:
+                payload = json.dumps({
+                    "to": contact_num,
+                    "message": message_text,
+                    "timestamp": timestamp,
+                    "event": "EMERGENCY_IMPAIRED_PERSON_HELP"
+                }).encode("utf-8")
+                req = urllib.request.Request(wh_url, data=payload, headers={"Content-Type": "application/json"}, method="POST")
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    status_msg = f"🌐 Webhook Alert Dispatched successfully ({resp.status})!"
+            except Exception as e:
+                status_msg = f"Webhook Alert Failed: {e}"
+
+    return status_msg
+
+
+class AlertSettingsDialog(tk.Toplevel):
+    """Configuration dialog for phone alert channel settings (Twilio / Webhook / Local)."""
+    def __init__(self, parent, config_data):
+        super().__init__(parent)
+        self.title("Phone Alert Dispatch Setup")
+        self.configure(bg=SURFACE_COLOR)
+        self.geometry("640x520")
+        self.resizable(False, False)
+        self.transient(parent)
+        self.grab_set()
+
+        self.config_data = config_data
+
+        tk.Label(self, text="⚙ Emergency Phone Alert Setup", font=("Segoe UI", 16, "bold"),
+                 bg=SURFACE_COLOR, fg=TEXT_MAIN).pack(pady=(20, 10))
+
+        # Channel selection
+        chan_frame = tk.Frame(self, bg=SURFACE_COLOR)
+        cat_lbl = tk.Label(chan_frame, text="Alert Method:", font=("Segoe UI", 12, "bold"), bg=SURFACE_COLOR, fg=TEXT_MAIN)
+        cat_lbl.pack(anchor="w")
+
+        self.chan_var = tk.StringVar(value=config_data.get("dispatch_channel", "simulation"))
+        
+        channels = [
+            ("Simulation / Local Alarm & TTS (Default)", "simulation"),
+            ("Twilio SMS API (Real Cellular SMS)", "twilio"),
+            ("Custom Webhook (IFTTT / Fast2SMS API)", "webhook")
+        ]
+
+        for label, val in channels:
+            tk.Radiobutton(chan_frame, text=label, variable=self.chan_var, value=val,
+                           bg=SURFACE_COLOR, fg=TEXT_MAIN, selectcolor=SURFACE_COLOR,
+                           font=("Segoe UI", 11)).pack(anchor="w", padx=10, pady=2)
+        chan_frame.pack(fill="x", padx=30, pady=10)
+
+        # Twilio Fields
+        tw_frame = tk.LabelFrame(self, text="Twilio SMS Setup", font=("Segoe UI", 11, "bold"),
+                                 bg=SURFACE_COLOR, fg=ORANGE_TILE, bd=1, padx=15, pady=8)
+        tw_frame.pack(fill="x", padx=30, pady=6)
+
+        tk.Label(tw_frame, text="Account SID:", bg=SURFACE_COLOR, fg=TEXT_MUTED).grid(row=0, column=0, sticky="e")
+        self.tw_sid_var = tk.StringVar(value=config_data.get("twilio_account_sid", ""))
+        tk.Entry(tw_frame, textvariable=self.tw_sid_var, width=45, bg=BG_COLOR).grid(row=0, column=1, padx=6, pady=3)
+
+        tk.Label(tw_frame, text="Auth Token:", bg=SURFACE_COLOR, fg=TEXT_MUTED).grid(row=1, column=0, sticky="e")
+        self.tw_auth_var = tk.StringVar(value=config_data.get("twilio_auth_token", ""))
+        tk.Entry(tw_frame, textvariable=self.tw_auth_var, width=45, show="*", bg=BG_COLOR).grid(row=1, column=1, padx=6, pady=3)
+
+        tk.Label(tw_frame, text="From Number:", bg=SURFACE_COLOR, fg=TEXT_MUTED).grid(row=2, column=0, sticky="e")
+        self.tw_from_var = tk.StringVar(value=config_data.get("twilio_from_number", ""))
+        tk.Entry(tw_frame, textvariable=self.tw_from_var, width=45, bg=BG_COLOR).grid(row=2, column=1, padx=6, pady=3)
+
+        # Webhook Fields
+        wh_frame = tk.LabelFrame(self, text="Webhook Setup", font=("Segoe UI", 11, "bold"),
+                                 bg=SURFACE_COLOR, fg=BLUE_BTN, bd=1, padx=15, pady=8)
+        wh_frame.pack(fill="x", padx=30, pady=6)
+
+        tk.Label(wh_frame, text="Webhook URL:", bg=SURFACE_COLOR, fg=TEXT_MUTED).grid(row=0, column=0, sticky="e")
+        self.wh_url_var = tk.StringVar(value=config_data.get("webhook_url", ""))
+        tk.Entry(wh_frame, textvariable=self.wh_url_var, width=45, bg=BG_COLOR).grid(row=0, column=1, padx=6, pady=3)
+
+        # Save Button
+        btn_f = tk.Frame(self, bg=SURFACE_COLOR)
+        btn_f.pack(pady=15)
+
+        tk.Button(btn_f, text="Save Settings", font=("Segoe UI", 13, "bold"),
+                  bg=GREEN_TILE, fg="#FFFFFF", activebackground=GREEN_TILE_HOV,
+                  relief="flat", padx=24, pady=8, cursor="hand2", command=self._save).pack(side="left", padx=10)
+        
+        tk.Button(btn_f, text="Cancel", font=("Segoe UI", 13),
+                  bg=BORDER_COLOR, fg=TEXT_MAIN, relief="flat", padx=20, pady=8,
+                  cursor="hand2", command=self.destroy).pack(side="left", padx=10)
+
+    def _save(self):
+        self.config_data["dispatch_channel"] = self.chan_var.get()
+        self.config_data["twilio_account_sid"] = self.tw_sid_var.get().strip()
+        self.config_data["twilio_auth_token"] = self.tw_auth_var.get().strip()
+        self.config_data["twilio_from_number"] = self.tw_from_var.get().strip()
+        self.config_data["webhook_url"] = self.wh_url_var.get().strip()
+        save_config(self.config_data)
+        messagebox.showinfo("Settings Saved", "Emergency alert setup updated successfully!", parent=self)
+        self.destroy()
 
 
 class CustomPhraseDialog(tk.Toplevel):
@@ -237,7 +410,8 @@ class EmergencyWindow(tk.Toplevel):
         tk.Label(left_hdr, text="🚨 Emergency Communication", font=("Segoe UI", 20, "bold"),
                  bg=SURFACE_COLOR, fg=RED_BTN).pack(anchor="w")
 
-        self.contact_var = tk.StringVar(value=f"Emergency Contact: {self.config_data.get('emergency_contact', '')}")
+        chan = self.config_data.get("dispatch_channel", "simulation").upper()
+        self.contact_var = tk.StringVar(value=f"Emergency Contact: {self.config_data.get('emergency_contact', '')}  [{chan} MODE]")
         self.contact_lbl = tk.Label(left_hdr, textvariable=self.contact_var, font=("Segoe UI", 12),
                                     bg=SURFACE_COLOR, fg=TEXT_MUTED)
         self.contact_lbl.pack(anchor="w")
@@ -245,15 +419,20 @@ class EmergencyWindow(tk.Toplevel):
         right_hdr = tk.Frame(header, bg=SURFACE_COLOR)
         right_hdr.pack(side="right")
 
+        tk.Button(right_hdr, text="⚙ Alert Setup", font=("Segoe UI", 12, "bold"),
+                  bg=SURFACE_COLOR, fg=TEXT_MAIN, activebackground=BORDER_COLOR,
+                  activeforeground=TEXT_MAIN, relief="solid", bd=1, padx=14, pady=8,
+                  cursor="hand2", command=self._open_alert_settings).pack(side="left", padx=6)
+
         tk.Button(right_hdr, text="✏ Edit Contact", font=("Segoe UI", 12, "bold"),
                   bg=SURFACE_COLOR, fg=TEXT_MAIN, activebackground=BORDER_COLOR,
                   activeforeground=TEXT_MAIN, relief="solid", bd=1, padx=14, pady=8,
-                  cursor="hand2", command=self._edit_contact).pack(side="left", padx=8)
+                  cursor="hand2", command=self._edit_contact).pack(side="left", padx=6)
 
         tk.Button(right_hdr, text="🚨 SEND ALERT NOW", font=("Segoe UI", 13, "bold"),
                   bg=RED_BTN, fg="#FFFFFF", activebackground=RED_BTN_HOV,
                   activeforeground="#FFFFFF", relief="flat", padx=18, pady=8,
-                  cursor="hand2", command=self._send_emergency_alert).pack(side="left", padx=8)
+                  cursor="hand2", command=self._send_emergency_alert).pack(side="left", padx=6)
 
         # ── Phrase Display Box ───────────────────────────────────────────────
         disp_frame = tk.Frame(self, bg=BG_COLOR, padx=24, pady=14)
@@ -311,7 +490,7 @@ class EmergencyWindow(tk.Toplevel):
                   cursor="hand2", command=self._speak_current_phrase).pack(side="right", padx=6)
 
         # Send Message Button
-        tk.Button(toolbar, text="📱 Send SMS", font=("Segoe UI", 15, "bold"),
+        tk.Button(toolbar, text="📱 Send Alert", font=("Segoe UI", 15, "bold"),
                   bg=ORANGE_TILE, fg="#FFFFFF", activebackground=ORANGE_TILE_HOV,
                   activeforeground="#FFFFFF", relief="flat", padx=24, pady=10,
                   cursor="hand2", command=self._send_emergency_alert).pack(side="right", padx=6)
@@ -339,7 +518,7 @@ class EmergencyWindow(tk.Toplevel):
                 hov = GREEN_TILE_HOV
 
             if self.remove_mode:
-                bg = "#DC2626"  # Bright red highlight during deletion mode
+                bg = "#DC2626"
                 hov = "#B91C1C"
 
             btn = tk.Button(
@@ -394,6 +573,12 @@ class EmergencyWindow(tk.Toplevel):
             self.status_var.set(f"Added new phrase: '{dlg.result['text']}'")
             speak_text(dlg.result["text"])
 
+    def _open_alert_settings(self):
+        dlg = AlertSettingsDialog(self, self.config_data)
+        self.wait_window(dlg)
+        chan = self.config_data.get("dispatch_channel", "simulation").upper()
+        self.contact_var.set(f"Emergency Contact: {self.config_data.get('emergency_contact', '')}  [{chan} MODE]")
+
     def _edit_contact(self):
         curr = self.config_data.get("emergency_contact", "")
         new_num = simpledialog.askstring("Emergency Contact", "Enter Emergency Contact Phone Number:",
@@ -401,7 +586,8 @@ class EmergencyWindow(tk.Toplevel):
         if new_num is not None and new_num.strip():
             self.config_data["emergency_contact"] = new_num.strip()
             save_config(self.config_data)
-            self.contact_var.set(f"Emergency Contact: {new_num.strip()}")
+            chan = self.config_data.get("dispatch_channel", "simulation").upper()
+            self.contact_var.set(f"Emergency Contact: {new_num.strip()}  [{chan} MODE]")
             self.status_var.set(f"Updated Emergency Contact: {new_num.strip()}")
 
     def _speak_current_phrase(self):
@@ -419,21 +605,15 @@ class EmergencyWindow(tk.Toplevel):
             self.display_var.set(txt)
 
         contact = self.config_data.get("emergency_contact", "Unspecified Contact")
-        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-
-        log_entry = f"[{timestamp}] ALERT SENT TO: {contact} | MESSAGE: {txt}\n"
         
-        try:
-            with open(LOG_FILE, "a", encoding="utf-8") as f:
-                f.write(log_entry)
-        except Exception as e:
-            print(f"[Emergency Log Error]: {e}")
+        # Dispatch signal across selected channel
+        dispatch_status = dispatch_phone_signal(contact, txt, self.config_data)
 
-        speak_text(f"Emergency Alert sent to contact. {txt}")
+        speak_text(f"Emergency Alert sent. {txt}")
 
-        self.status_var.set(f"✅ EMERGENCY ALERT SENT TO {contact}!")
+        self.status_var.set(f"✅ {dispatch_status}")
         messagebox.showinfo("Emergency Alert Dispatched",
-                            f"Emergency Message Dispatched!\n\nTo: {contact}\nMessage: '{txt}'\n\nLog saved to emergency_sent_log.txt",
+                            f"Emergency Message Dispatched!\n\nTo: {contact}\nMessage: '{txt}'\nStatus: {dispatch_status}\n\nLogged to emergency_sent_log.txt",
                             parent=self)
 
 
