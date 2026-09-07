@@ -1,0 +1,195 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[a4paper,landscape,margin=0.55in]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage[table]{xcolor}
+\usepackage{ragged2e}
+\usepackage{helvet}
+
+\renewcommand{\familydefault}{\sfdefault}
+
+% Simple colors
+\definecolor{headergray}{RGB}{235,235,235}
+\definecolor{textgray}{RGB}{80,80,80}
+
+% Column types
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.3}
+
+\begin{document}
+
+% =========================================================
+% TITLE
+% =========================================================
+
+\begin{center}
+    {\Large\bfseries Typing Experiment Data}\\
+    \vspace{2pt}
+    Participant: \textbf{Brittick}
+\end{center}
+
+\vspace{0.25cm}
+
+% =========================================================
+% TRIAL PERFORMANCE
+% =========================================================
+
+\noindent
+{\large\bfseries 1. Trial Performance}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.45in}
+    C{0.65in}
+    L{2.35in}
+    L{2.55in}
+    C{0.65in}
+    C{0.65in}
+    C{0.55in}
+    C{0.75in}
+    C{0.55in}
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Method} &
+\textbf{Stimulus} &
+\textbf{Typed Response} &
+\textbf{Correct} &
+\textbf{Time (s)} &
+\textbf{Space} &
+\textbf{Backspace} &
+\textbf{Chars}
+\\
+
+\midrule
+
+1 &
+Overt &
+smile &
+smile &
+Yes &
+21.024 &
+0 &
+0 &
+5
+\\
+
+2 &
+Overt &
+light &
+light &
+Yes &
+31.736 &
+0 &
+1 &
+5
+\\
+
+3 &
+Overt &
+The quick brown fox jumps over the lazy dog. &
+the quick fox jumps over the lazy dog &
+No &
+206.015 &
+7 &
+4 &
+37
+\\
+
+4 &
+Overt &
+Waltz, bad nymph, for quick jigs vex. &
+waltz jinx &
+No &
+58.755 &
+1 &
+0 &
+10
+\\
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vspace{0.35cm}
+
+% =========================================================
+% KEYSTROKE TIMESTAMPS
+% =========================================================
+
+\noindent
+{\large\bfseries 2. Keystroke Timestamps}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.55in}
+    X
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Keystroke Timestamps (seconds)}
+\\
+
+\midrule
+
+1 &
+\begin{tabular}[t]{@{}l@{}}
+s:0.000,\ m:4.947,\ i:7.895,\ l:10.706,\ e:16.416
+\end{tabular}
+\\[0.12cm]
+
+2 &
+\begin{tabular}[t]{@{}l@{}}
+i:0.000,\ BS:4.180,\ l:7.902,\ i:12.205,\ g:15.803,\ h:17.803,\ t:23.722
+\end{tabular}
+\\[0.12cm]
+
+3 &
+\begin{tabular}[t]{@{}l@{}}
+t:0.000,\ h:4.640,\ e:9.542,\ SP:12.599,\ q:18.355,\ u:22.494,\ i:25.912,\ c:30.012\\
+k:35.126,\ SP:37.844,\ f:42.783,\ o:47.318,\ x:52.535,\ SP:55.843,\ j:63.532,\ u:65.998\\
+m:70.141,\ p:74.490,\ s:81.999,\ c:83.455,\ BS:88.028,\ SP:91.654,\ o:95.570,\ v:99.907\\
+e:105.129,\ r:107.312,\ SP:110.224,\ t:113.736,\ h:116.158,\ e:121.849,\ SP:125.710,\ l:129.560\\
+a:134.619,\ a:135.828,\ BS:144.030,\ a:150.508,\ z:152.785,\ BS:158.984,\ BS:165.058,\ z:174.326\\
+y:179.871,\ SP:184.550,\ d:189.367,\ o:195.969,\ g:200.310
+\end{tabular}
+\\[0.12cm]
+
+4 &
+\begin{tabular}[t]{@{}l@{}}
+w:0.000,\ a:2.735,\ l:11.160,\ t:17.581,\ z:23.522,\ SP:27.810,\ j:32.339,\ i:40.105\\
+n:43.074,\ x:49.261
+\end{tabular}
+\\[0.12cm]
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vfill
+
+% =========================================================
+% SIMPLE FOOTER
+% =========================================================
+
+\noindent
+\textbf{Participant:} Brittick
+\hfill
+\textbf{Total Trials:} 4
+\hfill
+\textbf{Correct Trials:} 2/4
+
+\end{document}
