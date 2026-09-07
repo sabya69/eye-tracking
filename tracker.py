@@ -216,7 +216,7 @@ class AttentionTracker:
                             return
                 except Exception as e:
                     print(f"[WARN] Error reading profiles: {e}")
-
+        # this is the starting of the EAR RATION
         # -- Phase 1: EAR baseline ------------------------------------------- #
         print(f"[CAL] Phase 1: Eyes open for {duration}s ...")
         l_ears, r_ears = [], []
