@@ -16,7 +16,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from collections import deque
-from quiz_module import QuizModule                      # <- V2 addition
+from quiz_module import QuizModule    
+# Tracker.py is responsible for eye tracker and all other funcation                  # <- V2 addition
 
 # -- Mouse control ----------------------------------------------------------- #
 try:
