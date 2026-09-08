@@ -1,0 +1,3 @@
+method = method
+trial = trial_number
+characters_typed = char_count
