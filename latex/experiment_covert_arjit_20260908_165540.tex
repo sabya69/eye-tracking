@@ -1,0 +1,165 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[a4paper,landscape,margin=0.55in]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage[table]{xcolor}
+\usepackage{ragged2e}
+\usepackage{helvet}
+
+\renewcommand{\familydefault}{\sfdefault}
+
+% Simple colors
+\definecolor{headergray}{RGB}{235,235,235}
+\definecolor{textgray}{RGB}{80,80,80}
+
+% Column types
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.3}
+
+\begin{document}
+
+% =========================================================
+% TITLE
+% =========================================================
+
+\begin{center}
+    {\Large\bfseries Typing Experiment Data}\\
+    \vspace{2pt}
+    Participant: \textbf{Arjit}
+\end{center}
+
+\vspace{0.25cm}
+
+% =========================================================
+% TRIAL PERFORMANCE
+% =========================================================
+
+\noindent
+{\large\bfseries 1. Trial Performance}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.45in}
+    C{0.65in}
+    L{2.35in}
+    L{2.55in}
+    C{0.65in}
+    C{0.65in}
+    C{0.55in}
+    C{0.75in}
+    C{0.55in}
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Method} &
+\textbf{Stimulus} &
+\textbf{Typed Response} &
+\textbf{Correct} &
+\textbf{Time (s)} &
+\textbf{Space} &
+\textbf{Backspace} &
+\textbf{Chars}
+\\
+
+\midrule
+
+1 &
+Covert &
+How vexingly quick daft zebras jump! &
+how vexingly quick daft zebras jump &
+No &
+189.382 &
+6 &
+2 &
+35
+\\
+
+2 &
+Covert &
+Pack my box with five dozen liquor jugs. &
+pack my box with five dozen liquor jugs. &
+Yes &
+197.222 &
+7 &
+3 &
+40
+\\
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vspace{0.35cm}
+
+% =========================================================
+% KEYSTROKE TIMESTAMPS
+% =========================================================
+
+\noindent
+{\large\bfseries 2. Keystroke Timestamps}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.55in}
+    X
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Keystroke Timestamps (seconds)}
+\\
+
+\midrule
+
+1 &
+\begin{tabular}[t]{@{}l@{}}
+h:0.000,\ o:4.339,\ w:9.105,\ SP:13.048,\ v:19.447,\ e:23.391,\ x:26.764,\ i:31.409\\
+n:36.232,\ g:40.858,\ l:44.786,\ y:51.426,\ SP:54.866,\ q:63.097,\ u:66.362,\ i:69.753\\
+c:74.290,\ k:77.979,\ SP:81.422,\ d:86.437,\ r:89.751,\ BS:97.584,\ a:105.001,\ f:108.346\\
+t:110.506,\ SP:115.371,\ 
+:117.816,\ BS:125.688,\ z:132.953,\ e:138.426,\ b:143.700,\ r:147.025\\
+a:153.330,\ s:155.895,\ SP:160.461,\ j:164.967,\ u:167.492,\ m:172.016,\ p:175.909,\ SP:179.347
+\end{tabular}
+\\[0.12cm]
+
+2 &
+\begin{tabular}[t]{@{}l@{}}
+p:0.000,\ a:7.582,\ c:11.194,\ k:16.367,\ SP:19.993,\ m:26.606,\ y:31.798,\ SP:39.219\\
+b:42.106,\ o:45.798,\ x:50.144,\ v:54.793,\ BS:58.541,\ SP:62.987,\ w:70.806,\ i:73.924\\
+t:78.921,\ h:81.395,\ SP:85.161,\ f:88.946,\ i:95.842,\ v:99.238,\ e:102.338,\ SP:106.889\\
+d:110.097,\ o:113.792,\ z:119.354,\ e:122.661,\ n:127.366,\ SP:129.690,\ l:135.738,\ i:139.225\\
+q:146.074,\ 7:147.764,\ BS:152.334,\ u:156.672,\ p:159.410,\ BS:162.527,\ o:165.451,\ r:169.367\\
+SP:176.650,\ j:179.710,\ u:182.072,\ g:185.529,\ s:189.630,\ .:192.412
+\end{tabular}
+\\[0.12cm]
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vfill
+
+% =========================================================
+% SIMPLE FOOTER
+% =========================================================
+
+\noindent
+\textbf{Participant:} Arjit
+\hfill
+\textbf{Total Trials:} 2
+\hfill
+\textbf{Correct Trials:} 1/2
+
+\end{document}

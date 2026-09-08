@@ -1,0 +1,195 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[a4paper,landscape,margin=0.55in]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage[table]{xcolor}
+\usepackage{ragged2e}
+\usepackage{helvet}
+
+\renewcommand{\familydefault}{\sfdefault}
+
+% Simple colors
+\definecolor{headergray}{RGB}{235,235,235}
+\definecolor{textgray}{RGB}{80,80,80}
+
+% Column types
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.3}
+
+\begin{document}
+
+% =========================================================
+% TITLE
+% =========================================================
+
+\begin{center}
+    {\Large\bfseries Typing Experiment Data}\\
+    \vspace{2pt}
+    Participant: \textbf{Satyajit}
+\end{center}
+
+\vspace{0.25cm}
+
+% =========================================================
+% TRIAL PERFORMANCE
+% =========================================================
+
+\noindent
+{\large\bfseries 1. Trial Performance}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.45in}
+    C{0.65in}
+    L{2.35in}
+    L{2.55in}
+    C{0.65in}
+    C{0.65in}
+    C{0.55in}
+    C{0.75in}
+    C{0.55in}
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Method} &
+\textbf{Stimulus} &
+\textbf{Typed Response} &
+\textbf{Correct} &
+\textbf{Time (s)} &
+\textbf{Space} &
+\textbf{Backspace} &
+\textbf{Chars}
+\\
+
+\midrule
+
+1 &
+Overt &
+cloud &
+cloud &
+Yes &
+34.150 &
+0 &
+1 &
+5
+\\
+
+2 &
+Overt &
+house &
+house &
+Yes &
+34.064 &
+0 &
+1 &
+5
+\\
+
+3 &
+Overt &
+A quick move of the enemy will jeopardize six gunboats. &
+a quick move of the enemy &
+No &
+157.237 &
+5 &
+4 &
+25
+\\
+
+4 &
+Overt &
+The jay, pig, fox, zebra and my wolves quack! &
+the jay, pig &
+No &
+76.852 &
+2 &
+3 &
+12
+\\
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vspace{0.35cm}
+
+% =========================================================
+% KEYSTROKE TIMESTAMPS
+% =========================================================
+
+\noindent
+{\large\bfseries 2. Keystroke Timestamps}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.55in}
+    X
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Keystroke Timestamps (seconds)}
+\\
+
+\midrule
+
+1 &
+\begin{tabular}[t]{@{}l@{}}
+6:0.000,\ BS:4.978,\ c:9.399,\ l:15.201,\ o:18.592,\ u:22.530,\ d:28.220
+\end{tabular}
+\\[0.12cm]
+
+2 &
+\begin{tabular}[t]{@{}l@{}}
+7:0.000,\ BS:6.361,\ h:10.682,\ o:15.996,\ u:18.288,\ s:23.191,\ e:28.315
+\end{tabular}
+\\[0.12cm]
+
+3 &
+\begin{tabular}[t]{@{}l@{}}
+7:0.000,\ BS:7.759,\ a:13.948,\ SP:16.640,\ q:22.241,\ u:26.395,\ i:29.036,\ c:33.805\\
+k:37.723,\ SP:40.101,\ m:42.718,\ o:48.347,\ v:53.015,\ e:60.026,\ SP:65.806,\ o:69.766\\
+f:72.432,\ SP:77.398,\ t:81.035,\ h:84.226,\ e:88.694,\ g:91.992,\ BS:98.827,\ SP:104.367\\
+e:109.315,\ n:113.796,\ r:116.781,\ BS:121.472,\ e:128.537,\ m:135.818,\ y:140.859,\ b:143.090\\
+BS:149.384
+\end{tabular}
+\\[0.12cm]
+
+4 &
+\begin{tabular}[t]{@{}l@{}}
+t:0.000,\ h:5.385,\ e:9.546,\ SP:14.227,\ j:17.506,\ d:19.028,\ BS:26.002,\ a:33.849\\
+6:36.709,\ BS:42.545,\ y:46.316,\ ,:51.868,\ SP:55.859,\ l:60.493,\ BS:63.289,\ p:66.147\\
+i:68.277,\ g:72.475
+\end{tabular}
+\\[0.12cm]
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vfill
+
+% =========================================================
+% SIMPLE FOOTER
+% =========================================================
+
+\noindent
+\textbf{Participant:} Satyajit
+\hfill
+\textbf{Total Trials:} 4
+\hfill
+\textbf{Correct Trials:} 2/4
+
+\end{document}

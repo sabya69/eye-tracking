@@ -101,9 +101,10 @@ class Launcher(tk.Tk):
         wrapper.pack(fill="both", expand=True)
 
         body = tk.Frame(wrapper, bg=BG)
-        body.place(relx=0.18, rely=0.5, anchor="center")
+        body.place(relx=0.5, rely=0.5, anchor="center")
 
         self.modules = [
+            ("Emergency Communication", "Preset & custom emergency phrase alerts to contact number", DANGER, self._launch_emergency),
             ("Eye Tracker", "Calibrate & start gaze tracking",  GREEN, self._start_tracker),
             ("Notepad","Text editor  ·  save / open files", AMBER,  lambda: NotepadWindow(self)),
             ("Text-Entry Experiment", "Gaze-based text entry  ·  measure typing speed & accuracy", PURPLE, self._launch_text_experiment),
@@ -112,13 +113,16 @@ class Launcher(tk.Tk):
  
         self.cards = []
         for i, (name, desc, color, cmd) in enumerate(self.modules):
+            row = i // 2
+            col = i % 2
             card = _Card(body, name, desc, color, cmd)
-            card.grid(row=i, column=0, padx=20, pady=20, sticky="nsew")
+            card.grid(row=row, column=col, padx=20, pady=20, sticky="nsew")
             self.cards.append(card)
 
-        for i in range(len(self.modules)):
-            body.grid_columnconfigure(0, weight=1)
+        body.grid_columnconfigure(0, weight=1)
+        body.grid_columnconfigure(1, weight=1)
         body.grid_rowconfigure(0, weight=1)
+        body.grid_rowconfigure(1, weight=1)
 
              
 
@@ -185,6 +189,11 @@ class Launcher(tk.Tk):
         except Exception as e:
             self._flash(f"Failed to launch {app_name}")
             print(f"[WARN] Could not launch {app_name}: {e}")
+
+    def _launch_emergency(self):
+        self._flash("Opening Emergency Communication…")
+        from emergency import EmergencyWindow
+        EmergencyWindow(self)
 
     def _launch_text_experiment(self):
         self._flash("Opening Text-Entry Experiment…")
@@ -1169,12 +1178,22 @@ class TextEntryExperiment(tk.Toplevel):
 
     # ── Test stimuli — 20 research phrases ────────────────────────────────
     ALL_PHRASES = [
+        # ── Original pangrams ──
         "The quick brown fox jumps over the lazy dog.",
         "Pack my box with five dozen liquor jugs.",
         "Sphinx of black quartz, judge my vow",
         "How vexingly quick daft zebras jump!",
         "The five boxing wizards jump quickly.",
         "Waltz, bad nymph, for quick jigs vex.",
+        # ── Easy pangrams (shorter / simpler vocabulary) ──
+        "Mr Jock, TV quiz PhD, bags few lynx.",
+        "Jump by vow of quick, lazy strength in Oxford.",
+        "Brick quiz whangs jumpy veldt fox.",
+        "Glib jocks quiz nymph to vex dwarf.",
+        "Jackdaws love my big sphinx of quartz.",
+        "Few quips galvanized the mock jury box.",
+        "The jay, pig, fox, zebra and my wolves quack!",
+        "A quick move of the enemy will jeopardize six gunboats.",
     ]
     ALL_WORDS = [
         "water", "help", "food", "apple", "house", "smile", "table", "chair",

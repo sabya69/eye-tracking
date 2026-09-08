@@ -1,0 +1,164 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[a4paper,landscape,margin=0.55in]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage[table]{xcolor}
+\usepackage{ragged2e}
+\usepackage{helvet}
+
+\renewcommand{\familydefault}{\sfdefault}
+
+% Simple colors
+\definecolor{headergray}{RGB}{235,235,235}
+\definecolor{textgray}{RGB}{80,80,80}
+
+% Column types
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.3}
+
+\begin{document}
+
+% =========================================================
+% TITLE
+% =========================================================
+
+\begin{center}
+    {\Large\bfseries Typing Experiment Data}\\
+    \vspace{2pt}
+    Participant: \textbf{Shaubhik}
+\end{center}
+
+\vspace{0.25cm}
+
+% =========================================================
+% TRIAL PERFORMANCE
+% =========================================================
+
+\noindent
+{\large\bfseries 1. Trial Performance}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.45in}
+    C{0.65in}
+    L{2.35in}
+    L{2.55in}
+    C{0.65in}
+    C{0.65in}
+    C{0.55in}
+    C{0.75in}
+    C{0.55in}
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Method} &
+\textbf{Stimulus} &
+\textbf{Typed Response} &
+\textbf{Correct} &
+\textbf{Time (s)} &
+\textbf{Space} &
+\textbf{Backspace} &
+\textbf{Chars}
+\\
+
+\midrule
+
+1 &
+Covert &
+Jackdaws love my big sphinx of quartz. &
+jackdaws lovesmy big sphinx &
+No &
+145.867 &
+3 &
+3 &
+27
+\\
+
+2 &
+Covert &
+A quick move of the enemy will jeopardize six gunboats. &
+a quick move of the enemy &
+No &
+148.731 &
+5 &
+4 &
+25
+\\
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vspace{0.35cm}
+
+% =========================================================
+% KEYSTROKE TIMESTAMPS
+% =========================================================
+
+\noindent
+{\large\bfseries 2. Keystroke Timestamps}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.55in}
+    X
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Keystroke Timestamps (seconds)}
+\\
+
+\midrule
+
+1 &
+\begin{tabular}[t]{@{}l@{}}
+j:0.000,\ a:3.949,\ c:7.970,\ k:12.949,\ d:19.164,\ a:21.835,\ w:27.262,\ s:33.579\\
+SP:37.962,\ l:43.168,\ o:47.328,\ v:50.100,\ e:53.800,\ s:57.938,\ m:61.750,\ y:65.063\\
+SP:73.145,\ b:77.370,\ i:80.026,\ g:82.771,\ SP:88.692,\ s:92.340,\ 0:96.510,\ BS:100.561\\
+p:103.631,\ h:108.264,\ i:111.503,\ n:115.257,\ d:118.772,\ 
+:121.192,\ BS:128.101,\ BS:132.840\\
+x:138.927
+\end{tabular}
+\\[0.12cm]
+
+2 &
+\begin{tabular}[t]{@{}l@{}}
+7:0.000,\ BS:5.762,\ a:10.295,\ SP:15.000,\ q:20.510,\ u:26.303,\ i:28.820,\ c:32.744\\
+k:36.099,\ SP:40.803,\ m:47.096,\ o:51.294,\ v:54.967,\ e:58.447,\ SP:62.259,\ o:68.253\\
+f:71.800,\ SP:74.898,\ t:79.265,\ h:81.303,\ e:84.957,\ SP:90.295,\ e:94.525,\ n:97.935\\
+g:98.954,\ BS:107.189,\ e:111.055,\ n:118.293,\ BS:125.160,\ o:126.337,\ BS:135.347,\ m:139.651\\
+y:145.070
+\end{tabular}
+\\[0.12cm]
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vfill
+
+% =========================================================
+% SIMPLE FOOTER
+% =========================================================
+
+\noindent
+\textbf{Participant:} Shaubhik
+\hfill
+\textbf{Total Trials:} 2
+\hfill
+\textbf{Correct Trials:} 0/2
+
+\end{document}
