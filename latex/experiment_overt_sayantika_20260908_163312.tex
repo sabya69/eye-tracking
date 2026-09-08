@@ -1,0 +1,195 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[a4paper,landscape,margin=0.55in]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage[table]{xcolor}
+\usepackage{ragged2e}
+\usepackage{helvet}
+
+\renewcommand{\familydefault}{\sfdefault}
+
+% Simple colors
+\definecolor{headergray}{RGB}{235,235,235}
+\definecolor{textgray}{RGB}{80,80,80}
+
+% Column types
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.3}
+
+\begin{document}
+
+% =========================================================
+% TITLE
+% =========================================================
+
+\begin{center}
+    {\Large\bfseries Typing Experiment Data}\\
+    \vspace{2pt}
+    Participant: \textbf{Sayantika}
+\end{center}
+
+\vspace{0.25cm}
+
+% =========================================================
+% TRIAL PERFORMANCE
+% =========================================================
+
+\noindent
+{\large\bfseries 1. Trial Performance}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.45in}
+    C{0.65in}
+    L{2.35in}
+    L{2.55in}
+    C{0.65in}
+    C{0.65in}
+    C{0.55in}
+    C{0.75in}
+    C{0.55in}
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Method} &
+\textbf{Stimulus} &
+\textbf{Typed Response} &
+\textbf{Correct} &
+\textbf{Time (s)} &
+\textbf{Space} &
+\textbf{Backspace} &
+\textbf{Chars}
+\\
+
+\midrule
+
+1 &
+Overt &
+night &
+night &
+Yes &
+17.123 &
+0 &
+0 &
+5
+\\
+
+2 &
+Overt &
+music &
+music &
+Yes &
+19.967 &
+0 &
+0 &
+5
+\\
+
+3 &
+Overt &
+How vexingly quick daft zebras jump! &
+how  viexngl &
+No &
+100.079 &
+3 &
+9 &
+12
+\\
+
+4 &
+Overt &
+Jackdaws love my big sphinx of quartz. &
+jackdaws loves myy &
+No &
+96.312 &
+2 &
+7 &
+18
+\\
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vspace{0.35cm}
+
+% =========================================================
+% KEYSTROKE TIMESTAMPS
+% =========================================================
+
+\noindent
+{\large\bfseries 2. Keystroke Timestamps}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.55in}
+    X
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Keystroke Timestamps (seconds)}
+\\
+
+\midrule
+
+1 &
+\begin{tabular}[t]{@{}l@{}}
+n:0.000,\ i:4.208,\ g:7.112,\ h:9.654,\ t:12.176
+\end{tabular}
+\\[0.12cm]
+
+2 &
+\begin{tabular}[t]{@{}l@{}}
+m:0.000,\ u:3.545,\ s:7.344,\ i:12.133,\ c:15.535
+\end{tabular}
+\\[0.12cm]
+
+3 &
+\begin{tabular}[t]{@{}l@{}}
+h:0.000,\ o:2.568,\ o:3.014,\ BS:6.479,\ w:13.118,\ SP:18.209,\ SP:18.589,\ v:20.435\\
+i:24.113,\ e:26.918,\ e:27.498,\ BS:31.676,\ x:36.265,\ SP:40.285,\ ]:44.055,\ BS:46.196\\
+BS:47.464,\ n:52.578,\ n:53.087,\ BS:57.395,\ v:61.766,\ BS:66.056,\ BS:67.472,\ n:73.566\\
+g:78.096,\ l:84.003,\ h:88.036,\ BS:91.403,\ y:94.430,\ BS:98.374
+\end{tabular}
+\\[0.12cm]
+
+4 &
+\begin{tabular}[t]{@{}l@{}}
+j:0.000,\ a:3.208,\ c:6.756,\ n:9.505,\ BS:12.871,\ k:17.366,\ d:21.210,\ d:21.518\\
+BS:27.951,\ BS:28.454,\ d:32.982,\ a:35.936,\ w:38.238,\ s:40.539,\ SP:43.367,\ l:47.876\\
+o:50.663,\ v:54.460,\ r:58.163,\ BS:63.452,\ e:67.698,\ s:71.139,\ SP:74.128,\ m:75.866\\
+h:78.432,\ [:81.783,\ BS:82.167,\ -:83.418,\ BS:84.516,\ BS:85.015,\ y:90.981,\ y:91.549
+\end{tabular}
+\\[0.12cm]
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vfill
+
+% =========================================================
+% SIMPLE FOOTER
+% =========================================================
+
+\noindent
+\textbf{Participant:} Sayantika
+\hfill
+\textbf{Total Trials:} 4
+\hfill
+\textbf{Correct Trials:} 2/4
+
+\end{document}

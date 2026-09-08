@@ -1178,12 +1178,22 @@ class TextEntryExperiment(tk.Toplevel):
 
     # ── Test stimuli — 20 research phrases ────────────────────────────────
     ALL_PHRASES = [
+        # ── Original pangrams ──
         "The quick brown fox jumps over the lazy dog.",
         "Pack my box with five dozen liquor jugs.",
         "Sphinx of black quartz, judge my vow",
         "How vexingly quick daft zebras jump!",
         "The five boxing wizards jump quickly.",
         "Waltz, bad nymph, for quick jigs vex.",
+        # ── Easy pangrams (shorter / simpler vocabulary) ──
+        "Mr Jock, TV quiz PhD, bags few lynx.",
+        "Jump by vow of quick, lazy strength in Oxford.",
+        "Brick quiz whangs jumpy veldt fox.",
+        "Glib jocks quiz nymph to vex dwarf.",
+        "Jackdaws love my big sphinx of quartz.",
+        "Few quips galvanized the mock jury box.",
+        "The jay, pig, fox, zebra and my wolves quack!",
+        "A quick move of the enemy will jeopardize six gunboats.",
     ]
     ALL_WORDS = [
         "water", "help", "food", "apple", "house", "smile", "table", "chair",
