@@ -1787,15 +1787,107 @@ class TextEntryExperiment(tk.Toplevel):
         kb.pack(fill="both", expand=True, padx=8, pady=4)
         OnScreenKeyboard(kb, txt, layout="normal", notepad_app=None).pack(fill="both", expand=True)
 
-    # ─────────────────────────────────────────────────────────────────────────
-    #  Trial advance
-    # ─────────────────────────────────────────────────────────────────────────
     def _advance(self):
         self._idx += 1
         if self._idx < len(self._stimuli):
-            self._show_fixation()   # fixation before every new trial
+            self._show_rest_screen()    # rest + audio countdown before next trial
         else:
             self._save_csv_and_finish()
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  REST SCREEN — pause between trials with audio countdown
+    # ─────────────────────────────────────────────────────────────────────────
+    REST_DURATION = 10   # seconds of rest before next trial
+
+    def _show_rest_screen(self, secs=None):
+        """Display a rest/break screen between trials with a spoken countdown."""
+        if secs is None:
+            secs = self.REST_DURATION
+            self._use_canvas(); self._clear(); self.update_idletasks()
+            # Play initial TTS announcement in a background thread
+            self._speak_async("Tracker is paused. Take a rest.")
+
+        c  = self._canvas
+        cx, cy = self._cx(), self._cy()
+        h      = self._ch()
+
+        if secs == self.REST_DURATION:
+            c.create_text(cx, cy - 160,
+                          text="REST  BREAK",
+                          fill=self._C_FG, font=self._F_TITLE, anchor="center")
+            c.create_line(cx-200, cy-115, cx+200, cy-115, fill=self._C_DIM, width=1)
+            c.create_text(cx, cy - 80,
+                          text=f"Trial  {self._idx}  of  {len(self._stimuli)}  completed",
+                          fill=self._C_DIM, font=self._F_BODY, anchor="center")
+            c.create_text(cx, cy - 40,
+                          text="Relax your eyes. The next trial will begin after the countdown.",
+                          fill=self._C_DIM, font=self._F_SMALL, anchor="center")
+
+        # ── Countdown number (large, animated) ────────────────────────────────
+        c.delete("rest_count")
+        c.delete("rest_bar")
+        c.delete("rest_label")
+
+        if secs > 0:
+            # Large countdown number
+            count_color = self._C_GRN if secs <= 3 else self._C_ACC
+            c.create_text(cx, cy + 50, text=str(secs),
+                          fill=count_color, font=("Segoe UI", 96, "bold"),
+                          anchor="center", tags="rest_count")
+            c.create_text(cx, cy + 130,
+                          text="seconds remaining",
+                          fill=self._C_DIM, font=self._F_SMALL,
+                          anchor="center", tags="rest_label")
+
+            # Progress bar
+            bar_w = int(self._cw() * 0.5)
+            bar_x = cx - bar_w // 2
+            bar_y = cy + 170
+            frac  = 1.0 - (secs / self.REST_DURATION)
+            c.create_rectangle(bar_x, bar_y, bar_x + bar_w, bar_y + 12,
+                               fill="#E5E7EB", outline="", tags="rest_bar")
+            c.create_rectangle(bar_x, bar_y, bar_x + int(bar_w * frac), bar_y + 12,
+                               fill=self._C_ACC, outline="", tags="rest_bar")
+
+            # Audio beep for each countdown tick (background thread to avoid blocking)
+            self._beep_async(800 if secs > 3 else 1200, 150)
+
+            self._after_id = self.after(1000, lambda: self._show_rest_screen(secs - 1))
+        else:
+            # Countdown finished — announce tracker resuming and proceed
+            c.create_text(cx, cy + 50, text="GO!",
+                          fill=self._C_GRN, font=("Segoe UI", 72, "bold"),
+                          anchor="center", tags="rest_count")
+            self._beep_async(1400, 300)
+            self._speak_async("Tracker is starting.")
+            self._after_id = self.after(800, self._show_fixation)
+
+    def _beep_async(self, freq, duration_ms):
+        """Play a beep sound in a background thread so UI doesn't freeze."""
+        import threading
+        def _worker():
+            try:
+                import winsound
+                winsound.Beep(freq, duration_ms)
+            except Exception:
+                pass
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _speak_async(self, text):
+        """Speak text using Windows SAPI via PowerShell in a background thread."""
+        import threading
+        def _worker():
+            try:
+                import subprocess as sp
+                ps_cmd = (
+                    f"Add-Type -AssemblyName System.Speech; "
+                    f"(New-Object System.Speech.Synthesis.SpeechSynthesizer).Speak('{text}')"
+                )
+                sp.run(["powershell", "-Command", ps_cmd],
+                       capture_output=True, timeout=10)
+            except Exception:
+                pass
+        threading.Thread(target=_worker, daemon=True).start()
 
     # ─────────────────────────────────────────────────────────────────────────
     #  HEATMAP — generated from tracker gaze data during this experiment
