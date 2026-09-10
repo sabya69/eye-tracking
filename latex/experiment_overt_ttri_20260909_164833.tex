@@ -1,0 +1,194 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[a4paper,landscape,margin=0.55in]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage[table]{xcolor}
+\usepackage{ragged2e}
+\usepackage{helvet}
+
+\renewcommand{\familydefault}{\sfdefault}
+
+% Simple colors
+\definecolor{headergray}{RGB}{235,235,235}
+\definecolor{textgray}{RGB}{80,80,80}
+
+% Column types
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.3}
+
+\begin{document}
+
+% =========================================================
+% TITLE
+% =========================================================
+
+\begin{center}
+    {\Large\bfseries Typing Experiment Data}\\
+    \vspace{2pt}
+    Participant: \textbf{Ttri}
+\end{center}
+
+\vspace{0.25cm}
+
+% =========================================================
+% TRIAL PERFORMANCE
+% =========================================================
+
+\noindent
+{\large\bfseries 1. Trial Performance}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.45in}
+    C{0.65in}
+    L{2.35in}
+    L{2.55in}
+    C{0.65in}
+    C{0.65in}
+    C{0.55in}
+    C{0.75in}
+    C{0.55in}
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Method} &
+\textbf{Stimulus} &
+\textbf{Typed Response} &
+\textbf{Correct} &
+\textbf{Time (s)} &
+\textbf{Space} &
+\textbf{Backspace} &
+\textbf{Chars}
+\\
+
+\midrule
+
+1 &
+Overt &
+storm &
+storm &
+Yes &
+26.300 &
+0 &
+0 &
+5
+\\
+
+2 &
+Overt &
+stone &
+stone &
+Yes &
+26.761 &
+0 &
+0 &
+5
+\\
+
+3 &
+Overt &
+The jay, pig, fox, zebra and my wolves quack! &
+the  jay,pig,fox &
+No &
+104.093 &
+2 &
+1 &
+16
+\\
+
+4 &
+Overt &
+Jackdaws love my big sphinx of quartz. &
+jakhdwes lo ve my  bi &
+No &
+157.866 &
+5 &
+5 &
+21
+\\
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vspace{0.35cm}
+
+% =========================================================
+% KEYSTROKE TIMESTAMPS
+% =========================================================
+
+\noindent
+{\large\bfseries 2. Keystroke Timestamps}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.55in}
+    X
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Keystroke Timestamps (seconds)}
+\\
+
+\midrule
+
+1 &
+\begin{tabular}[t]{@{}l@{}}
+s:0.000,\ t:4.100,\ o:9.001,\ r:13.308,\ m:18.126
+\end{tabular}
+\\[0.12cm]
+
+2 &
+\begin{tabular}[t]{@{}l@{}}
+s:0.000,\ t:3.703,\ o:8.841,\ n:13.312,\ e:17.723
+\end{tabular}
+\\[0.12cm]
+
+3 &
+\begin{tabular}[t]{@{}l@{}}
+5:0.000,\ BS:4.756,\ t:9.786,\ h:14.355,\ e:17.604,\ SP:25.589,\ SP:26.820,\ j:33.746\\
+a:43.081,\ y:50.070,\ ,:56.753,\ p:60.389,\ i:65.128,\ g:68.433,\ ,:73.694,\ f:79.386\\
+o:83.430,\ x:92.343
+\end{tabular}
+\\[0.12cm]
+
+4 &
+\begin{tabular}[t]{@{}l@{}}
+n:0.000,\ l:1.253,\ BS:8.558,\ BS:10.824,\ j:15.118,\ a:26.070,\ k:34.123,\ h:35.065\\
+d:43.413,\ w:47.021,\ e:55.685,\ s:58.521,\ SP:64.522,\ n:67.263,\ BS:70.987,\ l:78.592\\
+o:82.895,\ j:84.119,\ BS:93.451,\ SP:99.942,\ v:103.942,\ e:107.729,\ v:109.230,\ BS:114.856\\
+SP:122.405,\ m:126.774,\ y:134.243,\ SP:138.856,\ SP:139.781,\ b:145.919,\ i:152.796
+\end{tabular}
+\\[0.12cm]
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vfill
+
+% =========================================================
+% SIMPLE FOOTER
+% =========================================================
+
+\noindent
+\textbf{Participant:} Ttri
+\hfill
+\textbf{Total Trials:} 4
+\hfill
+\textbf{Correct Trials:} 2/4
+
+\end{document}

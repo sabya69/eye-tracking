@@ -83,18 +83,18 @@ class AttentionTracker:
 
         # -- Blink (stats / drowsiness only) --------------------------------- #
         self.EAR_TH_L        = 0.23;  self.EAR_TH_R = 0.23
-        self.CONSEC_FRAMES   = 3
+        self.CONSEC_FRAMES   = 4      # increased from 3 to 4 frames (~150ms) to filter micro-blinks
         self.l_blink_ctr     = 0;  self.r_blink_ctr = 0
         self.l_blink_total   = 0;  self.r_blink_total = 0
 
         # -- Left blink click cooldown --------------------------------------- #
-        self.CLICK_COOL      = 0.65
+        self.CLICK_COOL      = 0.90   # increased from 0.65 to 0.90s for misclick prevention
         self.last_l_click    = 0.0;  self.last_r_click = 0.0
 
         # -- Dwell-to-click (hold gaze to open file/folder) ------------------ #
-        self.DWELL_CLICK_TIME  = 1.0    # seconds to hold gaze before click
-        self.DWELL_RADIUS_TH   = 45     # px - gaze must stay within this radius
-        self.DWELL_COOLDOWN    = 1.2    # seconds between dwell-clicks
+        self.DWELL_CLICK_TIME  = 1.25   # seconds to hold gaze before click (was 1.0)
+        self.DWELL_RADIUS_TH   = 40     # px - gaze must stay within this radius
+        self.DWELL_COOLDOWN    = 1.50   # seconds between dwell-clicks (was 1.2)
         self.dwell_anchor_x    = None   # screen px where dwell started
         self.dwell_anchor_y    = None
         self.dwell_start_t     = None   # when dwell started
@@ -139,6 +139,15 @@ class AttentionTracker:
         print("|  ESC -> End session + report                 |")
         print("+----------------------------------------------+\n")
 
+    def _get_mp_timestamp(self):
+        """Returns a strictly monotonically increasing integer timestamp in ms for MediaPipe."""
+        ts = int(time.time() * 1000)
+        if hasattr(self, '_last_mp_ts') and self._last_mp_ts is not None:
+            if ts <= self._last_mp_ts:
+                ts = self._last_mp_ts + 1
+        self._last_mp_ts = ts
+        return ts
+
     # =========================================================================
     #  CALIBRATION
     # =========================================================================
@@ -174,8 +183,12 @@ class AttentionTracker:
             
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             mp_img = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-            res = self.detector.detect_for_video(mp_img, int(time.time()*1000))
-            if res.face_landmarks:
+            try:
+                res = self.detector.detect_for_video(mp_img, self._get_mp_timestamp())
+            except Exception as _e:
+                print(f"[WARN] MP detection error in Phase 0: {_e}")
+                continue
+            if res and res.face_landmarks:
                 user_embedding = self._compute_face_embedding(res.face_landmarks[0], w, h)
                 break
                 
@@ -216,7 +229,118 @@ class AttentionTracker:
                             return
                 except Exception as e:
                     print(f"[WARN] Error reading profiles: {e}")
-        # this is the starting of the EAR RATION
+
+        # -- Phase 0.5: Face Position & Height Guidance ----------------------- #
+        print("[CAL] Phase 0.5: Face positioning & height alignment ...")
+        align_start = None
+        REQUIRED_ALIGN_TIME = 1.5  # Seconds face must remain in optimal landmark position
+        
+        while True:
+            ok, frame = self.cap.read()
+            if not ok: continue
+            frame = cv2.flip(frame, 1)
+            h, w = frame.shape[:2]
+            
+            # Semi-transparent overlay for visual clarity
+            ov = frame.copy()
+            cv2.rectangle(ov, (0, 0), (w, h), (15, 15, 15), -1)
+            cv2.addWeighted(ov, 0.40, frame, 0.60, 0, frame)
+            
+            # Target guide ellipse in center of window
+            target_cx, target_cy = w // 2, h // 2
+            target_rx, target_ry = int(w * 0.16), int(h * 0.26)
+            
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            mp_img = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+            try:
+                res = self.detector.detect_for_video(mp_img, self._get_mp_timestamp())
+            except Exception as _e:
+                print(f"[WARN] MP detection error in Phase 0.5: {_e}")
+                continue
+            
+            is_aligned = False
+            status_msg = "SEARCHING FOR FACE..."
+            status_color = (0, 165, 255) # Amber/Orange
+            
+            if res.face_landmarks:
+                lm = res.face_landmarks[0]
+                
+                # Face position metrics (10: forehead, 152: chin, 234: L cheek, 454: R cheek)
+                top_y  = lm[10].y
+                chin_y = lm[152].y
+                fc_x   = (lm[234].x + lm[454].x) / 2.0
+                fc_y   = (top_y + chin_y) / 2.0
+                face_h = abs(chin_y - top_y)
+                
+                # Highlight key face landmark points for visual feedback
+                for idx in [10, 152, 234, 454, 1, 33, 263]:
+                    px, py = int(lm[idx].x * w), int(lm[idx].y * h)
+                    cv2.circle(frame, (px, py), 3, (0, 255, 255), -1)
+                
+                # Dynamic height & positioning prompts for users of different heights
+                if fc_y > 0.58:
+                    status_msg = "SIT HIGHER  or  TILT CAMERA UP"
+                    status_color = (0, 140, 255)
+                elif fc_y < 0.38:
+                    status_msg = "SIT LOWER  or  TILT CAMERA DOWN"
+                    status_color = (0, 140, 255)
+                elif face_h < 0.24:
+                    status_msg = "MOVE CLOSER TO CAMERA"
+                    status_color = (0, 200, 255)
+                elif face_h > 0.65:
+                    status_msg = "MOVE BACK FROM CAMERA"
+                    status_color = (0, 200, 255)
+                elif abs(fc_x - 0.5) > 0.10:
+                    status_msg = "CENTER YOUR FACE HORIZONTALLY"
+                    status_color = (0, 200, 255)
+                else:
+                    is_aligned = True
+                    status_msg = "POSITION PERFECT! HOLD STILL..."
+                    status_color = (0, 255, 100) # Vibrant Green
+                
+                if is_aligned:
+                    if align_start is None:
+                        align_start = time.time()
+                    elapsed = time.time() - align_start
+                    frac = min(1.0, elapsed / REQUIRED_ALIGN_TIME)
+                    
+                    # Fill ring animation around face outline
+                    angle = int(360 * frac)
+                    cv2.ellipse(frame, (target_cx, target_cy), (target_rx + 8, target_ry + 8),
+                                -90, 0, angle, (0, 255, 100), 5)
+                    
+                    if elapsed >= REQUIRED_ALIGN_TIME:
+                        # Confirmed face position!
+                        cv2.ellipse(frame, (target_cx, target_cy), (target_rx, target_ry), 0, 0, 360, (0, 255, 0), 4)
+                        cv2.putText(frame, "POSITION CONFIRMED!", (w//2-160, h//2),
+                                    cv2.FONT_HERSHEY_DUPLEX, 0.9, (0, 255, 0), 2)
+                        cv2.imshow(WIN, frame)
+                        cv2.waitKey(400)
+                        break
+                else:
+                    align_start = None
+            else:
+                align_start = None
+            
+            # Draw central landmark guide ellipse
+            guide_color = (0, 255, 100) if is_aligned else (0, 165, 255)
+            cv2.ellipse(frame, (target_cx, target_cy), (target_rx, target_ry), 0, 0, 360, guide_color, 2)
+            
+            # Header banner
+            cv2.rectangle(frame, (w//2 - 270, 12), (w//2 + 270, 52), (20, 20, 20), -1)
+            cv2.rectangle(frame, (w//2 - 270, 12), (w//2 + 270, 52), guide_color, 2)
+            cv2.putText(frame, "CALIBRATION: FACE & HEIGHT GUIDANCE", (w//2 - 245, 38),
+                        cv2.FONT_HERSHEY_DUPLEX, 0.70, (255, 255, 255), 1)
+            
+            # Instruction prompt banner at bottom
+            cv2.rectangle(frame, (w//2 - 280, h - 60), (w//2 + 280, h - 15), (20, 20, 20), -1)
+            cv2.rectangle(frame, (w//2 - 280, h - 60), (w//2 + 280, h - 15), status_color, 2)
+            cv2.putText(frame, status_msg, (w//2 - 260, h - 30),
+                        cv2.FONT_HERSHEY_DUPLEX, 0.70, status_color, 2)
+            
+            cv2.imshow(WIN, frame)
+            if cv2.waitKey(1) & 0xFF == 27: return
+
         # -- Phase 1: EAR baseline ------------------------------------------- #
         print(f"[CAL] Phase 1: Eyes open for {duration}s ...")
         l_ears, r_ears = [], []
@@ -240,8 +364,12 @@ class AttentionTracker:
 
             rgb    = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             mp_img = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-            res    = self.detector.detect_for_video(mp_img, int(time.time()*1000))
-            if res.face_landmarks:
+            try:
+                res = self.detector.detect_for_video(mp_img, self._get_mp_timestamp())
+            except Exception as _e:
+                print(f"[WARN] MP detection error in Phase 1: {_e}")
+                continue
+            if res and res.face_landmarks:
                 lm = res.face_landmarks[0]
                 le = [(int(lm[i].x*w), int(lm[i].y*h)) for i in self.LEFT_EYE]
                 re = [(int(lm[i].x*w), int(lm[i].y*h)) for i in self.RIGHT_EYE]
@@ -288,9 +416,13 @@ class AttentionTracker:
 
                 rgb    = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 mp_img = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-                res    = self.detector.detect_for_video(mp_img, int(time.time()*1000))
+                try:
+                    res = self.detector.detect_for_video(mp_img, self._get_mp_timestamp())
+                except Exception as _e:
+                    print(f"[WARN] MP detection error in Phase 2: {_e}")
+                    continue
                 
-                if res.face_landmarks:
+                if res and res.face_landmarks:
                     lm = res.face_landmarks[0]
                     lgx = (lm[self.LEFT_IRIS[0]].x  + lm[self.LEFT_IRIS[2]].x)  / 2
                     rgx = (lm[self.RIGHT_IRIS[0]].x + lm[self.RIGHT_IRIS[2]].x) / 2
@@ -514,6 +646,8 @@ class AttentionTracker:
         self.session_start = time.time()
         self.prev_time     = time.time()
         print(f"[INFO] Tracking started at {datetime.datetime.now().strftime('%H:%M:%S')}")
+        # Pause flag file path (created/deleted by launcher rest screen)
+        _pause_flag = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tracker_paused.flag")
 
         while True:
             ok, frame = self.cap.read()
@@ -521,15 +655,39 @@ class AttentionTracker:
 
             frame     = cv2.flip(frame, 1)
             h, w      = frame.shape[:2]
+
+            # -- PAUSE CHECK: skip all processing when rest flag is active -- #
+            if os.path.exists(_pause_flag):
+                ov = frame.copy()
+                cv2.rectangle(ov, (0, 0), (w, h), (15, 15, 15), -1)
+                cv2.addWeighted(ov, 0.65, frame, 0.35, 0, frame)
+                cv2.putText(frame, "TRACKER PAUSED", (w//2 - 200, h//2 - 20),
+                            cv2.FONT_HERSHEY_DUPLEX, 1.2, (0, 200, 255), 2, cv2.LINE_AA)
+                cv2.putText(frame, "Resting  -  take a break", (w//2 - 170, h//2 + 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (180, 180, 180), 1, cv2.LINE_AA)
+                cv2.imshow(WIN, frame)
+                # Reset dwell/blink state so nothing fires on resume
+                self.dwell_anchor_x = None
+                self.dwell_progress = 0.0
+                self.l_blink_ctr = 0
+                self.r_blink_ctr = 0
+                key = cv2.waitKey(30) & 0xFF
+                if key == 27: break
+                self.prev_time = time.time()
+                continue
+
             rgb       = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             mp_img    = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-            ts_ms     = int(time.time()*1000)
-            res       = self.detector.detect_for_video(mp_img, ts_ms)
+            try:
+                res   = self.detector.detect_for_video(mp_img, self._get_mp_timestamp())
+            except Exception as _e:
+                print(f"[WARN] MP detection error in run loop: {_e}")
+                continue
             ts        = time.time() - self.session_start
 
             lear = rear = 0.0
             blink_flag  = 0
-            face_ok     = bool(res.face_landmarks)
+            face_ok     = bool(res and res.face_landmarks)
 
             # gx/gy defaults (used by quiz overlay even when face not detected)
             gx = gy = 0.5
@@ -550,14 +708,21 @@ class AttentionTracker:
                 rear = self._ear(re)
                 now  = time.time()
 
-                # -- LEFT BLINK -> single click ------------------------------ #
+                # Head pose & gaze direction update
+                self.gaze_dir = self._gaze_dir_label(lm, w, h)
+                if res.facial_transformation_matrixes:
+                    self.head_status = self._head_pose(res.facial_transformation_matrixes[0])
+
+                # -- LEFT BLINK -> single click (with head posture & duration safety checks) -- #
                 if lear < self.EAR_TH_L:
                     self.l_blink_ctr += 1
                 else:
-                    if self.l_blink_ctr >= self.CONSEC_FRAMES:
+                    if self.l_blink_ctr >= self.CONSEC_FRAMES and self.l_blink_ctr <= 20:
                         self.l_blink_total += 1;  blink_flag = 1
                         self.rolling_blinks.append(ts)
-                        if self.mouse_mode and MOUSE_AVAILABLE and now - self.last_l_click > self.CLICK_COOL:
+                        if (self.mouse_mode and MOUSE_AVAILABLE 
+                            and now - self.last_l_click > self.CLICK_COOL
+                            and self.head_status == "FORWARD"):
                             pyautogui.click()
                             self.last_l_click = now
                     self.l_blink_ctr = 0
@@ -570,11 +735,6 @@ class AttentionTracker:
                         self.r_blink_total += 1;  blink_flag = 1
                         self.rolling_blinks.append(ts)
                     self.r_blink_ctr = 0
-
-                self.gaze_dir = self._gaze_dir_label(lm, w, h)
-
-                if res.facial_transformation_matrixes:
-                    self.head_status = self._head_pose(res.facial_transformation_matrixes[0])
 
                 # raw gaze -- average both irises
                 gx = ((lm[self.LEFT_IRIS[0]].x+lm[self.LEFT_IRIS[2]].x)/2

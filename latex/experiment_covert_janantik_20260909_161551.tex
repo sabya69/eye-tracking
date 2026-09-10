@@ -1,0 +1,162 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[a4paper,landscape,margin=0.55in]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage[table]{xcolor}
+\usepackage{ragged2e}
+\usepackage{helvet}
+
+\renewcommand{\familydefault}{\sfdefault}
+
+% Simple colors
+\definecolor{headergray}{RGB}{235,235,235}
+\definecolor{textgray}{RGB}{80,80,80}
+
+% Column types
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.3}
+
+\begin{document}
+
+% =========================================================
+% TITLE
+% =========================================================
+
+\begin{center}
+    {\Large\bfseries Typing Experiment Data}\\
+    \vspace{2pt}
+    Participant: \textbf{Janantik}
+\end{center}
+
+\vspace{0.25cm}
+
+% =========================================================
+% TRIAL PERFORMANCE
+% =========================================================
+
+\noindent
+{\large\bfseries 1. Trial Performance}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.45in}
+    C{0.65in}
+    L{2.35in}
+    L{2.55in}
+    C{0.65in}
+    C{0.65in}
+    C{0.55in}
+    C{0.75in}
+    C{0.55in}
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Method} &
+\textbf{Stimulus} &
+\textbf{Typed Response} &
+\textbf{Correct} &
+\textbf{Time (s)} &
+\textbf{Space} &
+\textbf{Backspace} &
+\textbf{Chars}
+\\
+
+\midrule
+
+1 &
+Covert &
+Brick quiz whangs jumpy veldt fox. &
+brick quiz whfangs jumpy  veidft fox &
+No &
+205.431 &
+6 &
+4 &
+36
+\\
+
+2 &
+Covert &
+The jay, pig, fox, zebra and my wolves quack! &
+theb ja7gy [ &
+No &
+78.933 &
+2 &
+6 &
+12
+\\
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vspace{0.35cm}
+
+% =========================================================
+% KEYSTROKE TIMESTAMPS
+% =========================================================
+
+\noindent
+{\large\bfseries 2. Keystroke Timestamps}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.55in}
+    X
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Keystroke Timestamps (seconds)}
+\\
+
+\midrule
+
+1 &
+\begin{tabular}[t]{@{}l@{}}
+b:0.000,\ r:3.117,\ i:6.451,\ c:8.645,\ k:12.947,\ SP:18.616,\ q:25.167,\ i:32.707\\
+BS:37.658,\ u:41.677,\ i:43.850,\ z:48.423,\ SP:51.977,\ w:58.730,\ h:63.852,\ f:64.969\\
+a:68.064,\ n:82.747,\ v:89.444,\ BS:97.834,\ g:106.960,\ s:109.620,\ d:110.824,\ BS:114.794\\
+SP:118.038,\ j:125.066,\ u:127.145,\ m:129.929,\ p:134.818,\ y:137.974,\ SP:140.053,\ SP:144.798\\
+v:145.674,\ e:152.052,\ i:156.865,\ d:164.158,\ f:165.097,\ y:168.020,\ BS:175.563,\ t:182.555\\
+SP:187.263,\ f:189.916,\ o:193.313,\ x:197.040
+\end{tabular}
+\\[0.12cm]
+
+2 &
+\begin{tabular}[t]{@{}l@{}}
+t:0.000,\ h:3.332,\ e:9.067,\ b:11.939,\ SP:16.359,\ j:21.050,\ a:27.134,\ 7:30.264\\
+g:32.473,\ y:34.487,\ y:35.727,\ i:37.319,\ i:48.958,\ BS:52.768,\ BS:54.649,\ BS:55.990\\
+0:58.147,\ 0:58.409,\ i:59.388,\ BS:62.721,\ BS:63.647,\ BS:64.715,\ SP:75.884,\ [:76.725
+\end{tabular}
+\\[0.12cm]
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vfill
+
+% =========================================================
+% SIMPLE FOOTER
+% =========================================================
+
+\noindent
+\textbf{Participant:} Janantik
+\hfill
+\textbf{Total Trials:} 2
+\hfill
+\textbf{Correct Trials:} 0/2
+
+\end{document}
