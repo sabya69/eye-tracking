@@ -1797,13 +1797,20 @@ class TextEntryExperiment(tk.Toplevel):
     # ─────────────────────────────────────────────────────────────────────────
     #  REST SCREEN — pause between trials with audio countdown
     # ─────────────────────────────────────────────────────────────────────────
-    REST_DURATION = 10   # seconds of rest before next trial
+    REST_DURATION = 30   # seconds of rest before next trial
+    _PAUSE_FLAG   = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tracker_paused.flag")
 
     def _show_rest_screen(self, secs=None):
         """Display a rest/break screen between trials with a spoken countdown."""
         if secs is None:
             secs = self.REST_DURATION
             self._use_canvas(); self._clear(); self.update_idletasks()
+            # ── Pause the tracker by creating the flag file ────────────────────
+            try:
+                with open(self._PAUSE_FLAG, "w") as f:
+                    f.write("paused")
+            except Exception:
+                pass
             # Play initial TTS announcement in a background thread
             self._speak_async("Tracker is paused. Take a rest.")
 
@@ -1820,8 +1827,9 @@ class TextEntryExperiment(tk.Toplevel):
                           text=f"Trial  {self._idx}  of  {len(self._stimuli)}  completed",
                           fill=self._C_DIM, font=self._F_BODY, anchor="center")
             c.create_text(cx, cy - 40,
-                          text="Relax your eyes. The next trial will begin after the countdown.",
-                          fill=self._C_DIM, font=self._F_SMALL, anchor="center")
+                          text="Relax your eyes. The tracker is paused.\nNext trial begins after the countdown.",
+                          fill=self._C_DIM, font=self._F_SMALL, anchor="center",
+                          justify="center")
 
         # ── Countdown number (large, animated) ────────────────────────────────
         c.delete("rest_count")
@@ -1849,11 +1857,21 @@ class TextEntryExperiment(tk.Toplevel):
             c.create_rectangle(bar_x, bar_y, bar_x + int(bar_w * frac), bar_y + 12,
                                fill=self._C_ACC, outline="", tags="rest_bar")
 
-            # Audio beep for each countdown tick (background thread to avoid blocking)
-            self._beep_async(800 if secs > 3 else 1200, 150)
+            # Audio beep only for the last 10 seconds of countdown
+            if secs <= 10:
+                self._beep_async(800 if secs > 3 else 1200, 150)
+            # TTS announcement when 10 seconds remain
+            if secs == 10:
+                self._speak_async("Tracker is starting in 10")
 
             self._after_id = self.after(1000, lambda: self._show_rest_screen(secs - 1))
         else:
+            # ── Resume tracker by deleting the pause flag ──────────────────────
+            try:
+                if os.path.exists(self._PAUSE_FLAG):
+                    os.remove(self._PAUSE_FLAG)
+            except Exception:
+                pass
             # Countdown finished — announce tracker resuming and proceed
             c.create_text(cx, cy + 50, text="GO!",
                           fill=self._C_GRN, font=("Segoe UI", 72, "bold"),

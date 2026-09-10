@@ -646,6 +646,8 @@ class AttentionTracker:
         self.session_start = time.time()
         self.prev_time     = time.time()
         print(f"[INFO] Tracking started at {datetime.datetime.now().strftime('%H:%M:%S')}")
+        # Pause flag file path (created/deleted by launcher rest screen)
+        _pause_flag = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tracker_paused.flag")
 
         while True:
             ok, frame = self.cap.read()
@@ -653,6 +655,27 @@ class AttentionTracker:
 
             frame     = cv2.flip(frame, 1)
             h, w      = frame.shape[:2]
+
+            # -- PAUSE CHECK: skip all processing when rest flag is active -- #
+            if os.path.exists(_pause_flag):
+                ov = frame.copy()
+                cv2.rectangle(ov, (0, 0), (w, h), (15, 15, 15), -1)
+                cv2.addWeighted(ov, 0.65, frame, 0.35, 0, frame)
+                cv2.putText(frame, "TRACKER PAUSED", (w//2 - 200, h//2 - 20),
+                            cv2.FONT_HERSHEY_DUPLEX, 1.2, (0, 200, 255), 2, cv2.LINE_AA)
+                cv2.putText(frame, "Resting  -  take a break", (w//2 - 170, h//2 + 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (180, 180, 180), 1, cv2.LINE_AA)
+                cv2.imshow(WIN, frame)
+                # Reset dwell/blink state so nothing fires on resume
+                self.dwell_anchor_x = None
+                self.dwell_progress = 0.0
+                self.l_blink_ctr = 0
+                self.r_blink_ctr = 0
+                key = cv2.waitKey(30) & 0xFF
+                if key == 27: break
+                self.prev_time = time.time()
+                continue
+
             rgb       = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             mp_img    = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
             try:
