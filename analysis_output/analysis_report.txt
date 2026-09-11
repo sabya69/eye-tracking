@@ -4,53 +4,53 @@
 
 1. DATA OVERVIEW
 ----------------------------------------
-  Total CSV files loaded    : 6
-  Total trials (all)        : 18
+  Total CSV files loaded    : 9
+  Total trials (all)        : 28
   Abandoned trials          : 1
-  Valid trials analysed      : 17
-  Unique participants        : 6
-  Overt trials               : 13
-  Covert trials              : 4
+  Valid trials analysed      : 27
+  Unique participants        : 8
+  Overt trials               : 21
+  Covert trials              : 6
 
 2. METHOD COMPARISON (Overt vs Covert)
 ----------------------------------------
-  [OVERT]  (13 trials, 4 participants)
-    WPM             : 2.26 ± 0.62
-    CER (%)         : 27.52 ± 34.40
-    Accuracy (%)    : 53.8
-    TCT (s)         : 75.00 ± 59.13
-    KSPC            : 1.368 ± 0.413
-    Backspace Rate  : 11.00%
-    Mean IKI (s)    : 4.069 ± 0.764
-    IEI             : 1.281
-    CLPI            : 0.4057
+  [OVERT]  (21 trials, 5 participants)
+    WPM             : 2.16 ± 0.52
+    CER (%)         : 28.22 ± 32.67
+    Accuracy (%)    : 52.4
+    TCT (s)         : 75.74 ± 56.00
+    KSPC            : 1.354 ± 0.361
+    Backspace Rate  : 10.97%
+    Mean IKI (s)    : 4.173 ± 0.737
+    IEI             : 1.149
+    CLPI            : 0.4248
 
-  [COVERT]  (4 trials, 2 participants)
-    WPM             : 2.22 ± 0.17
-    CER (%)         : 22.23 ± 25.85
-    Accuracy (%)    : 25.0
-    TCT (s)         : 170.30 ± 26.78
-    KSPC            : 1.209 ± 0.082
-    Backspace Rate  : 8.18%
-    Mean IKI (s)    : 4.437 ± 0.153
-    IEI             : 0.569
-    CLPI            : 0.4303
+  [COVERT]  (6 trials, 3 participants)
+    WPM             : 2.14 ± 0.21
+    CER (%)         : 30.97 ± 32.25
+    Accuracy (%)    : 16.7
+    TCT (s)         : 160.93 ± 47.34
+    KSPC            : 1.343 ± 0.328
+    Backspace Rate  : 11.14%
+    Mean IKI (s)    : 4.278 ± 0.480
+    IEI             : 0.379
+    CLPI            : 0.4735
 
 3. STATISTICAL TESTS (Mann-Whitney U, α = 0.05)
 ----------------------------------------
-  wpm                        U =     21.0  p = 0.6235
-  cpm                        U =     21.0  p = 0.6235
-  tct_sec                    U =      6.0  p = 0.0227 *
-  cer                        U =     25.0  p = 0.9523
-  kspc                       U =     32.5  p = 0.4929
-  backspace_rate             U =     32.5  p = 0.4929
-  mean_iki                   U =     19.0  p = 0.4773
-  sd_iki                     U =     20.0  p = 0.5487
-  long_pause_rate            U =     10.0  p = 0.0789
-  mean_correction_time       U =     10.0  p = 0.2601
-  iei                        U =     34.0  p = 0.3578
-  clpi                       U =     25.0  p = 0.9563
-  is_correct                 U =     33.5  p = 0.3601
+  wpm                        U =     55.0  p = 0.6699
+  cpm                        U =     55.0  p = 0.6699
+  tct_sec                    U =     18.0  p = 0.0067 *
+  cer                        U =     51.0  p = 0.4826
+  kspc                       U =     65.5  p = 0.9065
+  backspace_rate             U =     66.5  p = 0.8602
+  mean_iki                   U =     57.0  p = 0.7547
+  sd_iki                     U =     42.0  p = 0.2389
+  long_pause_rate            U =     55.0  p = 0.6612
+  mean_correction_time       U =     33.0  p = 0.3809
+  iei                        U =     85.0  p = 0.1685
+  clpi                       U =     50.0  p = 0.4762
+  is_correct                 U =     85.5  p = 0.1363
 
 4. NON-COMPUTABLE METRICS (data not available)
 ----------------------------------------
