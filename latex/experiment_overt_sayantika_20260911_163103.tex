@@ -1,0 +1,196 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[a4paper,landscape,margin=0.55in]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage[table]{xcolor}
+\usepackage{ragged2e}
+\usepackage{helvet}
+
+\renewcommand{\familydefault}{\sfdefault}
+
+% Simple colors
+\definecolor{headergray}{RGB}{235,235,235}
+\definecolor{textgray}{RGB}{80,80,80}
+
+% Column types
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.3}
+
+\begin{document}
+
+% =========================================================
+% TITLE
+% =========================================================
+
+\begin{center}
+    {\Large\bfseries Typing Experiment Data}\\
+    \vspace{2pt}
+    Participant: \textbf{Sayantika}
+\end{center}
+
+\vspace{0.25cm}
+
+% =========================================================
+% TRIAL PERFORMANCE
+% =========================================================
+
+\noindent
+{\large\bfseries 1. Trial Performance}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.45in}
+    C{0.65in}
+    L{2.35in}
+    L{2.55in}
+    C{0.65in}
+    C{0.65in}
+    C{0.55in}
+    C{0.75in}
+    C{0.55in}
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Method} &
+\textbf{Stimulus} &
+\textbf{Typed Response} &
+\textbf{Correct} &
+\textbf{Time (s)} &
+\textbf{Space} &
+\textbf{Backspace} &
+\textbf{Chars}
+\\
+
+\midrule
+
+1 &
+Overt &
+grass &
+grass &
+Yes &
+33.109 &
+0 &
+2 &
+5
+\\
+
+2 &
+Overt &
+help &
+help &
+Yes &
+25.942 &
+0 &
+1 &
+4
+\\
+
+3 &
+Overt &
+Jackdaws love my big sphinx of quartz. &
+jackdaws love my  big &
+No &
+117.501 &
+4 &
+5 &
+21
+\\
+
+4 &
+Overt &
+Sphinx of black quartz, judge my vow &
+sphinx of  big quartzz &
+No &
+123.953 &
+4 &
+3 &
+22
+\\
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vspace{0.35cm}
+
+% =========================================================
+% KEYSTROKE TIMESTAMPS
+% =========================================================
+
+\noindent
+{\large\bfseries 2. Keystroke Timestamps}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.55in}
+    X
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Keystroke Timestamps (seconds)}
+\\
+
+\midrule
+
+1 &
+\begin{tabular}[t]{@{}l@{}}
+g:0.000,\ g:0.657,\ BS:10.068,\ BS:10.732,\ g:14.235,\ r:19.246,\ a:22.702,\ s:25.292\\
+s:26.807
+\end{tabular}
+\\[0.12cm]
+
+2 &
+\begin{tabular}[t]{@{}l@{}}
+h:0.000,\ e:4.887,\ l:10.296,\ l:12.429,\ BS:17.758,\ p:21.897
+\end{tabular}
+\\[0.12cm]
+
+3 &
+\begin{tabular}[t]{@{}l@{}}
+j:0.000,\ a:5.018,\ c:8.758,\ k:12.755,\ d:19.143,\ a:24.506,\ a:25.064,\ BS:32.960\\
+w:37.711,\ s:40.032,\ SP:43.301,\ l:47.861,\ o:52.329,\ v:56.929,\ e:60.393,\ SP:63.475\\
+m:65.936,\ y:71.024,\ SP:78.842,\ SP:79.378,\ b:86.179,\ b:86.912,\ BS:89.768,\ BS:90.249\\
+b:94.515,\ i:97.032,\ g:99.656,\ g:100.527,\ ]:103.897,\ BS:105.556,\ BS:108.468
+\end{tabular}
+\\[0.12cm]
+
+4 &
+\begin{tabular}[t]{@{}l@{}}
+s:0.000,\ p:5.316,\ h:8.926,\ i:11.912,\ n:17.115,\ x:21.704,\ SP:27.030,\ o:30.546\\
+f:34.173,\ SP:37.306,\ SP:37.703,\ b:40.428,\ i:45.347,\ g:48.613,\ SP:54.297,\ o:57.413\\
+f:60.633,\ g:64.120,\ BS:68.261,\ BS:68.450,\ BS:71.084,\ q:77.520,\ u:85.602,\ a:91.572\\
+r:95.893,\ t:98.990,\ z:104.927,\ z:105.247
+\end{tabular}
+\\[0.12cm]
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vfill
+
+% =========================================================
+% SIMPLE FOOTER
+% =========================================================
+
+\noindent
+\textbf{Participant:} Sayantika
+\hfill
+\textbf{Total Trials:} 4
+\hfill
+\textbf{Correct Trials:} 2/4
+
+\end{document}
