@@ -20,18 +20,21 @@ class VirtualKeyboard:
             list("ASDFGHJKL"),
             list("ZXCVBNM") + ["←"],
             ["SPACE", "ENTER", "CLEAR", "CLOSE"],
+            ["MOVE_LEFT", "MOVE_RIGHT"],
         ],
         "alpha": [
             list("ABCDEFGHIJ"),
             list("KLMNOPQRST"),
             list("UVWXYZ") + ["←"],
             ["SPACE", "ENTER", "CLEAR", "CLOSE"],
+            ["MOVE_LEFT", "MOVE_RIGHT"],
         ],
         "cluster": [
             list("ETAOI") + list("FGYPB"),
             list("NSHRD") + list("VKJXQ"),
             list("LCUMW") + list("Z") + ["←"],
             ["SPACE", "ENTER", "CLEAR", "CLOSE"],
+            ["MOVE_LEFT", "MOVE_RIGHT"],
         ]
     }
 
@@ -53,8 +56,9 @@ class VirtualKeyboard:
 
     # ── geometry ─────────────────────────────────────────────────────────────
     def _kw(self, label):
-        if label == "SPACE":                      return self.KEY_W * 4
-        if label in ("ENTER", "CLEAR", "CLOSE"):  return self.KEY_W * 2
+        if label == "SPACE":                              return self.KEY_W * 4
+        if label in ("ENTER", "CLEAR", "CLOSE"):        return self.KEY_W * 2
+        if label in ("MOVE_LEFT", "MOVE_RIGHT"):         return self.KEY_W * 2.5
         return self.KEY_W
 
     def _build_layout(self):
@@ -129,6 +133,12 @@ class VirtualKeyboard:
         elif label == "SPACE": self.typed_text += " "
         elif label == "CLEAR": self.typed_text = ""
         elif label == "CLOSE": self.close()
+        elif label == "MOVE_LEFT":
+            if MOUSE_AVAILABLE:
+                pyautogui.press('left')
+        elif label == "MOVE_RIGHT":
+            if MOUSE_AVAILABLE:
+                pyautogui.press('right')
         elif label == "ENTER":
             text = self.typed_text.strip()
             if text:

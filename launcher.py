@@ -553,6 +553,7 @@ class OnScreenKeyboard(tk.Frame):
             ["A","S","D","F","G","H","J","K","L",";","'"],
             ["Z","X","C","V","B","N","M",",","."],
             ["Enter", "\\", "Space"],
+            ["MOVE_LEFT", "MOVE_RIGHT"],
         ],
         "alpha": [
             ["1","2","3","4","5","6","7","8","9","0","-","⌫"],
@@ -560,6 +561,7 @@ class OnScreenKeyboard(tk.Frame):
             ["N","O","P","Q","R","S","T","U","V","W","X"],
             ["Y","Z",",",".",";","'","[","]"],
             ["Enter", "\\", "Space"],
+            ["MOVE_LEFT", "MOVE_RIGHT"],
         ],
         "cluster": [
             ["1","2","3","4","5","6","7","8","9","0","-","⌫"],
@@ -567,6 +569,7 @@ class OnScreenKeyboard(tk.Frame):
             ["I","O","R","D","L","C","B","V","K","J"],
             ["U","M","W","X","Q","Z",",",".",";","'","[","]"],
             ["Enter", "\\", "Space"],
+            ["MOVE_LEFT", "MOVE_RIGHT"],
         ]
     }
 
@@ -576,7 +579,7 @@ class OnScreenKeyboard(tk.Frame):
         "]":"}","\\":"|",";":":","'":'"',",":"<",".":">","/":"?",
     }
 
-    WIDE = {"⌫":2,"Tab":1.5,"Caps":1.8,"Enter":2,"Shift":2.3,"Space":6,"Ctrl":1.5,"Alt":1.5}
+    WIDE = {"⌫":2,"Tab":1.5,"Caps":1.8,"Enter":2,"Shift":2.3,"Space":6,"Ctrl":1.5,"Alt":1.5,"MOVE_LEFT":1.5,"MOVE_RIGHT":1.5}
 
 
     def __init__(self, master, target: tk.Text, layout="normal", notepad_app=None):
@@ -749,6 +752,14 @@ class OnScreenKeyboard(tk.Frame):
             t.insert("insert", "\t")
         elif key == "Space":
             t.insert("insert", " ")
+        elif key == "MOVE_LEFT":
+            # Move cursor left
+            pos = t.index("insert")
+            if pos != "1.0":
+                t.mark_set("insert", "insert-1c")
+        elif key == "MOVE_RIGHT":
+            # Move cursor right
+            t.mark_set("insert", "insert+1c")
         elif key in ("Ctrl", "Alt"):
             pass  # modifier stubs
         else:
