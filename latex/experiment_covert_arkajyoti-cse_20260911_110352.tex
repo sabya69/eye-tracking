@@ -1,0 +1,164 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[a4paper,landscape,margin=0.55in]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage[table]{xcolor}
+\usepackage{ragged2e}
+\usepackage{helvet}
+
+\renewcommand{\familydefault}{\sfdefault}
+
+% Simple colors
+\definecolor{headergray}{RGB}{235,235,235}
+\definecolor{textgray}{RGB}{80,80,80}
+
+% Column types
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.3}
+
+\begin{document}
+
+% =========================================================
+% TITLE
+% =========================================================
+
+\begin{center}
+    {\Large\bfseries Typing Experiment Data}\\
+    \vspace{2pt}
+    Participant: \textbf{Arkajyoti-cse}
+\end{center}
+
+\vspace{0.25cm}
+
+% =========================================================
+% TRIAL PERFORMANCE
+% =========================================================
+
+\noindent
+{\large\bfseries 1. Trial Performance}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.45in}
+    C{0.65in}
+    L{2.35in}
+    L{2.55in}
+    C{0.65in}
+    C{0.65in}
+    C{0.55in}
+    C{0.75in}
+    C{0.55in}
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Method} &
+\textbf{Stimulus} &
+\textbf{Typed Response} &
+\textbf{Correct} &
+\textbf{Time (s)} &
+\textbf{Space} &
+\textbf{Backspace} &
+\textbf{Chars}
+\\
+
+\midrule
+
+1 &
+Covert &
+Glib jocks quiz nymph to vex dwarf. &
+glib jocks quiz nymph to vex dwarf &
+No &
+225.681 &
+6 &
+2 &
+34
+\\
+
+2 &
+Covert &
+Waltz, bad nymph, for quick jigs vex. &
+waltz, bad nymph, for quick jigs vex &
+No &
+171.015 &
+6 &
+3 &
+36
+\\
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vspace{0.35cm}
+
+% =========================================================
+% KEYSTROKE TIMESTAMPS
+% =========================================================
+
+\noindent
+{\large\bfseries 2. Keystroke Timestamps}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.55in}
+    X
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Keystroke Timestamps (seconds)}
+\\
+
+\midrule
+
+1 &
+\begin{tabular}[t]{@{}l@{}}
+g:0.000,\ l:3.294,\ i:10.669,\ b:15.983,\ SP:28.300,\ j:34.033,\ o:36.883,\ c:44.551\\
+k:48.616,\ s:55.200,\ SP:60.683,\ q:67.375,\ u:72.595,\ i:76.266,\ z:86.357,\ SP:91.016\\
+n:99.949,\ y:109.682,\ m:113.384,\ p:118.898,\ h:123.983,\ SP:127.615,\ t:131.525,\ o:135.034\\
+SP:141.249,\ v:145.119,\ e:152.768,\ x:156.916,\ SP:176.033,\ d:181.368,\ w:186.026,\ a:190.279\\
+r:195.866,\ r:196.449,\ ]:204.899,\ BS:206.830,\ BS:208.333,\ f:220.882
+\end{tabular}
+\\[0.12cm]
+
+2 &
+\begin{tabular}[t]{@{}l@{}}
+w:0.000,\ a:4.235,\ l:10.950,\ t:15.884,\ z:21.502,\ ,:27.216,\ SP:31.634,\ b:35.414\\
+a:39.730,\ d:43.181,\ SP:49.600,\ n:55.117,\ y:59.766,\ m:65.917,\ p:69.501,\ h:76.884\\
+,:81.985,\ SP:85.518,\ f:90.483,\ o:93.230,\ t:96.829,\ BS:100.878,\ r:106.266,\ SP:109.899\\
+q:114.567,\ u:117.671,\ u:118.326,\ BS:120.950,\ i:123.246,\ c:126.534,\ k:129.317,\ SP:131.617\\
+j:135.583,\ i:137.383,\ g:140.553,\ s:143.900,\ SP:147.813,\ v:150.767,\ e:153.656,\ e:154.022\\
+BS:161.114,\ x:165.483
+\end{tabular}
+\\[0.12cm]
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vfill
+
+% =========================================================
+% SIMPLE FOOTER
+% =========================================================
+
+\noindent
+\textbf{Participant:} Arkajyoti-cse
+\hfill
+\textbf{Total Trials:} 2
+\hfill
+\textbf{Correct Trials:} 0/2
+
+\end{document}
