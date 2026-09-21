@@ -34,8 +34,8 @@
 
 \renewcommand{\familydefault}{\sfdefault}
 \setlength{\parindent}{0pt}
-\setlength{\parskip}{6pt}
-\renewcommand{\arraystretch}{1.3}
+\setlength{\parskip}{5pt}
+\renewcommand{\arraystretch}{1.25}
 
 \title{\textbf{\LARGE Comprehensive Design, Mathematical Formulation, and Implementation Report: Hands-Free Gaze Tracking \& AAC Interface Platform}}
 \author{\textbf{Eye-Tracking Research \& Accessibility Engineering Team}}
@@ -96,15 +96,15 @@ The system architecture is structured into a multi-tier pipeline encompassing op
 \end{figure}
 
 % =============================================================================
-\section{Mathematical Formulations}
+\section{Mathematical Formulations \& Variable Definitions}
 % =============================================================================
 
 \subsection{Eye Aspect Ratio (EAR) \& Blink Detection}
-Blink events and eye openness are computed using the scalar ratio of vertical eyelid distances to the horizontal eye width. Given eye landmark points $P_1, P_2, P_3, P_4, P_5, P_6$:
+Blink events and eye openness are computed using the scalar ratio of vertical eyelid distances to the horizontal eye width:
 \begin{equation}
 \text{EAR} = \frac{\|P_2 - P_6\|_2 + \|P_3 - P_5\|_2}{2 \|P_1 - P_4\|_2 + \epsilon}
 \end{equation}
-where $\epsilon = 10^{-6}$ prevents numerical division by zero.
+
 A deliberate blink action is classified when:
 \begin{equation}
 \text{Blink}_{\text{left}} = 
@@ -114,12 +114,43 @@ A deliberate blink action is classified when:
 \end{cases}
 \end{equation}
 
+\textbf{Variable and Symbol Definitions:}
+\begin{itemize}
+    \item $P_1 = \text{Outer eye canthus corner point (MediaPipe landmark index 33 for left eye, 362 for right eye)}$
+    \item $P_2 = \text{Upper eyelid outer landmark point (index 160 for left eye, 385 for right eye)}$
+    \item $P_3 = \text{Upper eyelid inner landmark point (index 158 for left eye, 387 for right eye)}$
+    \item $P_4 = \text{Inner eye canthus corner point (index 133 for left eye, 263 for right eye)}$
+    \item $P_5 = \text{Lower eyelid inner landmark point (index 153 for left eye, 373 for right eye)}$
+    \item $P_6 = \text{Lower eyelid outer landmark point (index 144 for left eye, 380 for right eye)}$
+    \item $\|A - B\|_2 = \sqrt{(x_A - x_B)^2 + (y_A - y_B)^2} = \text{2D Euclidean distance between landmark points}$
+    \item $\epsilon = 10^{-6} = \text{Numerical epsilon constant added to denominator to prevent division-by-zero}$
+    \item $\text{EAR}_L = \text{Instantaneous Eye Aspect Ratio scalar computed for the left eye}$
+    \item $\theta_{\text{EAR}} = 0.23 = \text{Threshold ratio below which an eyelid is classified as closed}$
+    \item $N_f = 4 \text{ frames } (\approx 133\,\text{ms}) = \text{Consecutive frame persistence required to filter natural micro-blinks}$
+    \item $t_{\text{last}} = \text{Timestamp of the last successfully executed click action}$
+    \item $T_{\text{cool}} = 0.90\,\text{s} = \text{Refractory cooldown duration preventing unintentional repeated clicks}$
+\end{itemize}
+
 \subsection{Head Pose Estimation from Transformation Matrix}
-From the $4 \times 4$ rigid transformation matrix $M$ computed by the landmark graph, the $3 \times 3$ rotation submatrix $R$ yields Euler angles:
+From the $4 \times 4$ rigid transformation matrix $M$ computed by the landmark graph, the $3 \times 3$ rotation submatrix $R \in SO(3)$ yields Euler angles:
 \begin{align}
 \text{Yaw}   &= \arctan2\left(R_{1,0}, R_{0,0}\right) \times \frac{180^\circ}{\pi} \\
 \text{Pitch} &= \arctan2\left(-R_{2,0}, \sqrt{R_{2,1}^2 + R_{2,2}^2}\right) \times \frac{180^\circ}{\pi}
 \end{align}
+
+\textbf{Variable and Symbol Definitions:}
+\begin{itemize}
+    \item $M \in \mathbb{R}^{4 \times 4} = \text{Homogeneous 3D rigid transformation matrix computed from facial mesh geometry}$
+    \item $R \in \mathbb{R}^{3 \times 3} = \text{3D rotation submatrix containing directional orientation vectors}$
+    \item $R_{1,0} = \text{Element at row index 1, column index 0 of the rotation matrix } R$
+    \item $R_{0,0} = \text{Element at row index 0, column index 0 of the rotation matrix } R$
+    \item $R_{2,0} = \text{Element at row index 2, column index 0 of the rotation matrix } R$
+    \item $R_{2,1}, R_{2,2} = \text{Elements at row index 2, columns 1 and 2 of the rotation matrix } R$
+    \item $\arctan2(y, x) = \text{Four-quadrant inverse tangent returning angles in range } [-\pi, \pi]$
+    \item $\frac{180^\circ}{\pi} = \text{Conversion factor transforming radian angle values into degrees}$
+    \item $\text{Yaw} = \text{Horizontal head turn angle (valid interaction range: } |\text{Yaw}| \le 25.0^\circ\text{)}$
+    \item $\text{Pitch} = \text{Vertical head tilt angle (valid interaction range: } |\text{Pitch}| \le 20.0^\circ\text{)}$
+\end{itemize}
 
 \subsection{Iris Pupil Gaze Mapping \& Screen Calibration}
 Iris center positions $I_x, I_y$ are normalized relative to the inner and outer eye canthi:
@@ -132,6 +163,19 @@ s_x = \text{clip}\left(\frac{g_x - x_{\min}}{x_{\max} - x_{\min}}, 0, 1\right) \
 s_y = \text{clip}\left(\frac{g_y - y_{\min}}{y_{\max} - y_{\min}}, 0, 1\right) \times H_{\text{screen}}
 \end{equation}
 
+\textbf{Variable and Symbol Definitions:}
+\begin{itemize}
+    \item $I_x, I_y = \text{Horizontal and vertical pixel coordinates of the center of the pupil/iris (landmarks 468, 473)}$
+    \item $C_{\text{inner}, x} = \text{Horizontal position of the inner eye canthus (landmark 133)}$
+    \item $C_{\text{outer}, x} = \text{Horizontal position of the outer eye canthus (landmark 33)}$
+    \item $g_x, g_y = \text{Normalized dimensionless gaze ratios bounded in interval } [0.0, 1.0]$
+    \item $[x_{\min}, x_{\max}, y_{\min}, y_{\max}] = [0.35, 0.65, 0.30, 0.70] = \text{Empirical user calibration bounding box}$
+    \item $W_{\text{screen}} = \text{Horizontal resolution of the display monitor in pixels (e.g., } 1920\,\text{px)}$
+    \item $H_{\text{screen}} = \text{Vertical resolution of the display monitor in pixels (e.g., } 1080\,\text{px)}$
+    \item $\text{clip}(v, 0, 1) = \text{Clamping function constraining values: } \max(0.0, \min(1.0, v))$
+    \item $s_x, s_y = \text{Calculated raw pixel coordinates mapped to the display window}$
+\end{itemize}
+
 \subsection{Gaze Smoothing \& Jitter Attenuation}
 To eliminate ocular micro-tremors and saccadic overshoot without introducing sluggish latency, a first-order Exponential Moving Average (EMA) with deadzone gating is implemented:
 \begin{align}
@@ -143,12 +187,33 @@ d &= \sqrt{(s_{x, t} - \hat{s}_{x, t-1})^2 + (s_{y, t} - \hat{s}_{y, t-1})^2} \\
 \end{cases}
 \end{align}
 
+\textbf{Variable and Symbol Definitions:}
+\begin{itemize}
+    \item $s_{x, t}, s_{y, t} = \text{Raw calculated gaze screen coordinates at current frame } t$
+    \item $\hat{s}_{x, t-1}, \hat{s}_{y, t-1} = \text{Smoothed output screen coordinates from the previous frame } t-1$
+    \item $d = \text{Spatial Euclidean translation distance between current gaze point and previous filtered coordinate}$
+    \item $\delta_{\text{deadzone}} = 8\,\text{px} = \text{Micro-saccadic tremor deadzone threshold below which movement is ignored}$
+    \item $\alpha = 0.08 = \text{Exponential Moving Average smoothing coefficient (weight given to new frame: } 8\%\text{)}$
+    \item $1 - \alpha = 0.92 = \text{Inertial smoothing coefficient (weight retained from history: } 92\%\text{)}$
+    \item $\hat{s}_t = (\hat{s}_{x, t}, \hat{s}_{y, t}) = \text{Final stabilized, tremor-free coordinate dispatched to the OS mouse cursor}$
+\end{itemize}
+
 \subsection{Dwell-to-Click State Machine}
 Dwell interaction tracks the persistence of gaze coordinates within a spatial radius $\mathcal{R}_{\text{dwell}}$ over elapsed time:
 \begin{equation}
 P_{\text{dwell}}(t) = \min\left(1.0, \frac{t - t_{\text{anchor}}}{T_{\text{dwell}}}\right)
 \end{equation}
 When $P_{\text{dwell}}(t) = 1.0$, a system click event is fired and a refractory cooldown $T_{\text{cooldown}}$ is enforced.
+
+\textbf{Variable and Symbol Definitions:}
+\begin{itemize}
+    \item $t = \text{Current system clock timestamp in seconds}$
+    \item $t_{\text{anchor}} = \text{Timestamp when gaze first entered and stabilized within the current button/zone}$
+    \item $T_{\text{dwell}} = 1.50\,\text{s} = \text{Continuous fixation duration required to confirm an intentional click selection}$
+    \item $P_{\text{dwell}}(t) = \text{Normalized dwell charging progress ranging continuously from } 0.0 \text{ to } 1.0$
+    \item $\mathcal{R}_{\text{dwell}} = 35\,\text{px} = \text{Maximum allowable spatial fixation jitter radius around anchor position}$
+    \item $T_{\text{cooldown}} = 1.80\,\text{s} = \text{Post-click lockout cooldown preventing accidental double-clicks on neighboring keys}$
+\end{itemize}
 
 % =============================================================================
 \section{Current Implementations \& Advancements Over Baseline}
@@ -273,6 +338,17 @@ Experimental text composition is evaluated through the following standardized HC
 \bottomrule
 \end{tabularx}
 \end{table}
+
+\textbf{Metric Variable Definitions:}
+\begin{itemize}
+    \item $|T| = \text{Total character length of the final typed transcript produced by the participant}$
+    \item $|K| = \text{Total count of registered key selections (including letter keystrokes, spaces, and backspaces)}$
+    \item $S = \text{Total duration of the typing trial in seconds from first keystroke to submission}$
+    \item $I = \text{Ground-truth target stimulus prompt string presented to the user}$
+    \item $\text{Levenshtein}(T, I) = \text{Minimum number of single-character insertions, deletions, or substitutions required}$
+    \item $t_{k_i} = \text{Exact timestamp in seconds when the } i\text{-th keystroke was registered}$
+    \item $t_{\text{stimulus\_onset}} = \text{Exact timestamp when the typing phase became active on screen}$
+\end{itemize}
 
 % =============================================================================
 \section{Experimental Paradigms \& Standardized Stimuli}
