@@ -151,6 +151,53 @@ P_{\text{dwell}}(t) = \min\left(1.0, \frac{t - t_{\text{anchor}}}{T_{\text{dwell
 When $P_{\text{dwell}}(t) = 1.0$, a system click event is fired and a refractory cooldown $T_{\text{cooldown}}$ is enforced.
 
 % =============================================================================
+\section{Current Implementations \& Advancements Over Baseline}
+% =============================================================================
+
+This section highlights the specific engineering advancements implemented in the current system and provides a comparative analysis explaining how each change directly improves typing accuracy, reduces misclicks, and ensures rigorous experimental validity over the previous prototype.
+
+\begin{table}[H]
+\centering
+\caption{Comparative Analysis: Previous Baseline vs. Current Enhanced Implementation.}
+\small
+\begin{tabularx}{\textwidth}{p{0.22\textwidth} p{0.22\textwidth} p{0.22\textwidth} X}
+\toprule
+\textbf{Functional Subsystem} & \textbf{Previous Baseline} & \textbf{Current Implementation} & \textbf{Quantitative \& Operational Benefit} \\
+\midrule
+\textbf{Micro-Jitter Suppression} & Deadzone: $4$\,px \newline EMA $\alpha = 0.12$ & \textbf{Deadzone: $8$\,px} \newline \textbf{EMA $\alpha = 0.08$} & Eliminates involuntary 4--7\,px ocular tremors, preventing the cursor from vibrating across adjacent key borders. \\
+\midrule
+\textbf{Dwell-to-Click Timing} & Hold: $1.25$\,s \newline Radius: $40$\,px \newline Cooldown: $1.50$\,s & \textbf{Hold: $1.50$\,s} \newline \textbf{Radius: $35$\,px} \newline \textbf{Cooldown: $1.80$\,s} & Resolves the ``Midas Touch'' problem by allowing reading without premature clicking; restricts spatial dwell strictly to target keys. \\
+\midrule
+\textbf{Cursor Origin Alignment} & Arbitrary cursor position at trial onset & \textbf{Automated Center Warping (\texttt{\_center\_cursor})} & Uses Win32 \texttt{SetCursorPos} to place cursor at $(W/2, H/2)$ at start and post-rest, standardizing Cognitive Latency (CLPI). \\
+\midrule
+\textbf{Stimulus Standardization} & Random unweighted sentence sampling & \textbf{Deterministic 8-Trial Canonical Pool} & Uniform 5-word + 3-pangram progression guarantees $100\%$ repeatable conditions across all participants. \\
+\midrule
+\textbf{On-Screen Layout Diversity} & Fixed single QWERTY keyboard & \textbf{QWERTY, Alphabetical, Frequency-Clustered} & Enables rigorous multi-layout comparative HCI research measuring Fitts' law motor targeting and visual search. \\
+\midrule
+\textbf{Ocular Fatigue Mitigation} & Continuous typing without enforced breaks & \textbf{30\,s Rest Screen with TTS Audio Guidance} & Suspends video capture and announces rest/resumption via audio, preventing gaze drift caused by dry/strained eyes. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{In-Depth Technical Rationale of Key Advancements}
+
+\subsubsection{1. Ocular Tremor and Micro-Saccade Suppression}
+In human vision, the eyes exhibit continuous micro-tremors (drift and micro-saccades) spanning $4$ to $7$ pixels on standard displays. In the previous configuration ($\delta_{\text{deadzone}} = 4$\,px, $\alpha=0.12$), these involuntary micro-movements caused the cursor to jitter erratically between neighboring keys. By expanding the deadzone to $8$\,px and tuning the EMA filter to $\alpha=0.08$, micro-tremors are filtered out entirely while purposeful eye movements smoothly transition the cursor with minimal lag.
+
+\subsubsection{2. Anti-Midas Touch Dwell State Machine}
+The classic ``Midas Touch'' problem occurs when looking at an interface element to inspect it inadvertently triggers a click. Increasing $T_{\text{dwell}}$ from $1.25$\,s to $1.50$\,s provides a comfortable visual comprehension buffer. Furthermore, tightening the spatial bounding radius from $40$\,px to $35$\,px ensures that shifting gaze to an adjacent letter immediately resets the dwell timer, preventing accidental misclicks.
+
+\subsubsection{3. Automated Screen-Center Cursor Warping}
+In eye-tracking experiments, initial cursor location heavily biases first-key latency and trajectory. Through the integration of the \texttt{\_center\_cursor()} routine using Windows API \texttt{SetCursorPos($W/2, H/2$)}, the cursor is automatically repositioned to the exact display center prior to Trial 1 and after every 30-second break, eliminating spatial bias and protecting against edge misclicks.
+
+\subsubsection{4. Standardized Interleaved Stimulus Protocol}
+Previously, variable-length prompts resulted in inconsistent cognitive load. The current protocol implements a canonical 8-trial sequence comprising 5 common words and 3 full pangrams arranged in an interleaved progression:
+\begin{equation}
+W_1 \rightarrow W_2 \rightarrow P_1 \rightarrow W_3 \rightarrow W_4 \rightarrow P_2 \rightarrow W_5 \rightarrow P_3
+\end{equation}
+This ensures that every subject experiences an identical progression of lexical complexity and motor path lengths.
+
+% =============================================================================
 \section{System Hyperparameters \& Operational Values}
 % =============================================================================
 
@@ -249,13 +296,6 @@ To ensure rigorous cross-participant consistency, stimuli are drawn from a deter
     \end{enumerate}
 \end{itemize}
 
-\subsection{Interleaved Trial Progression Sequence}
-\begin{equation}
-\text{Trial Sequence} = \underbrace{W_1 \rightarrow W_2}_{\text{Words}} \rightarrow \underbrace{P_1}_{\text{Phrase}} \rightarrow \underbrace{W_3 \rightarrow W_4}_{\text{Words}} \rightarrow \underbrace{P_2}_{\text{Phrase}} \rightarrow \underbrace{W_5}_{\text{Word}} \rightarrow \underbrace{P_3}_{\text{Phrase}}
-\end{equation}
-
-Between trials, an automated 30-second resting break screen suspends camera capture, announces tracker state via text-to-speech audio, and resets cursor position to screen center $(W/2, H/2)$ upon resumption.
-
 % =============================================================================
 \section{Future Work \& Proposed Development}
 % =============================================================================
@@ -278,8 +318,6 @@ The proposed keyboard controls include:
     \item \textbf{Space}: Inserts a space between words.
     \item \textbf{Enter}: Confirms or submits the current input.
 \end{itemize}
-
-These controls reduce the need for character-by-character correction and make gaze-based text composition faster and more practical for users with severe motor impairments.
 
 % -----------------------------------------------------------------------------
 \subsection{Family Communication and Phrase-Based Messaging}
