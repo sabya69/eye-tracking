@@ -14,7 +14,7 @@
 \usepackage{microtype}
 \usepackage{float}
 
-% Color Palette definition matching system styling
+% ── Color Palette Definition ──────────────────────────────────────────────────
 \definecolor{primaryblue}{RGB}{37,99,235}
 \definecolor{accentblue}{RGB}{29,78,216}
 \definecolor{darkgray}{RGB}{31,41,55}
@@ -113,7 +113,6 @@ A deliberate blink action is classified when:
 0, & \text{otherwise}
 \end{cases}
 \end{equation}
-where $N_f = 5$ frames ($\approx 170$\,ms), $\theta_{\text{EAR}} = 0.23$, and $T_{\text{cool}} = 0.90$\,s.
 
 \subsection{Head Pose Estimation from Transformation Matrix}
 From the $4 \times 4$ rigid transformation matrix $M$ computed by the landmark graph, the $3 \times 3$ rotation submatrix $R$ yields Euler angles:
@@ -121,7 +120,6 @@ From the $4 \times 4$ rigid transformation matrix $M$ computed by the landmark g
 \text{Yaw}   &= \arctan2\left(R_{1,0}, R_{0,0}\right) \times \frac{180^\circ}{\pi} \\
 \text{Pitch} &= \arctan2\left(-R_{2,0}, \sqrt{R_{2,1}^2 + R_{2,2}^2}\right) \times \frac{180^\circ}{\pi}
 \end{align}
-The tracker confirms front-facing engagement when $|\text{Yaw}| \le 25^\circ$ and $|\text{Pitch}| \le 20^\circ$.
 
 \subsection{Iris Pupil Gaze Mapping \& Screen Calibration}
 Iris center positions $I_x, I_y$ are normalized relative to the inner and outer eye canthi:
@@ -144,14 +142,67 @@ d &= \sqrt{(s_{x, t} - \hat{s}_{x, t-1})^2 + (s_{y, t} - \hat{s}_{y, t-1})^2} \\
 \alpha s_t + (1 - \alpha) \hat{s}_{t-1}, & \text{if } d > \delta_{\text{deadzone}}
 \end{cases}
 \end{align}
-where $\alpha = 0.08$ and $\delta_{\text{deadzone}} = 8$\,px.
 
 \subsection{Dwell-to-Click State Machine}
-Dwell interaction tracks the persistence of gaze coordinates within a spatial radius $\mathcal{R}_{\text{dwell}} = 35$\,px over elapsed time:
+Dwell interaction tracks the persistence of gaze coordinates within a spatial radius $\mathcal{R}_{\text{dwell}}$ over elapsed time:
 \begin{equation}
-P_{\text{dwell}}(t) = \min\left(1.0, \frac{t - t_{\text{anchor}}}{T_{\text{dwell}}}\right), \quad T_{\text{dwell}} = 1.50\,\text{s}
+P_{\text{dwell}}(t) = \min\left(1.0, \frac{t - t_{\text{anchor}}}{T_{\text{dwell}}}\right)
 \end{equation}
-When $P_{\text{dwell}}(t) = 1.0$, a system click event is fired and a refractory cooldown $T_{\text{cooldown}} = 1.80$\,s is enforced.
+When $P_{\text{dwell}}(t) = 1.0$, a system click event is fired and a refractory cooldown $T_{\text{cooldown}}$ is enforced.
+
+% =============================================================================
+\section{System Hyperparameters \& Operational Values}
+% =============================================================================
+
+This section details all empirical hyperparameters, operational thresholds, temporal windows, and landmark index sets implemented across the sensing, filtering, interaction, and experiment modules.
+
+\begin{table}[H]
+\centering
+\caption{Complete Specification of System Parameters and Implementation Values.}
+\small
+\begin{tabularx}{\textwidth}{p{0.28\textwidth} p{0.18\textwidth} p{0.14\textwidth} X}
+\toprule
+\textbf{Parameter Name} & \textbf{Code Variable} & \textbf{Tuned Value} & \textbf{Functional Role \& Rationale} \\
+\midrule
+\multicolumn{4}{l}{\textbf{A. Video Acquisition \& Neural Landmark Extraction}} \\
+Frame Resolution & \texttt{cap.read()} & $640 \times 480$\,px & Standard webcam resolution balancing speed and detail. \\
+Sampling Rate & FPS & 30.0\,FPS & Target acquisition frequency ($\sim 33.3$\,ms/frame). \\
+Face Landmark Set & \texttt{face\_landmarks} & 478 points & MediaPipe 3D facial topology. \\
+Left Eye Contour & \texttt{LEFT\_EYE} & [33, 160, 158, 133, 153, 144] & Landmark indices used for Left EAR computation. \\
+Right Eye Contour & \texttt{RIGHT\_EYE} & [362, 385, 387, 263, 373, 380] & Landmark indices used for Right EAR computation. \\
+Left Iris Indices & \texttt{LEFT\_IRIS} & [468, 469, 470, 471, 472] & Iris perimeter and center points for gaze vector. \\
+Right Iris Indices & \texttt{RIGHT\_IRIS} & [473, 474, 475, 476, 477] & Contralateral iris landmarks for binocular gaze. \\
+\midrule
+\multicolumn{4}{l}{\textbf{B. Eye Aspect Ratio (EAR) \& Blink Discrimination}} \\
+Left EAR Threshold & \texttt{EAR\_TH\_L} & 0.23 & Below this ratio, left eyelid closure is detected. \\
+Right EAR Threshold & \texttt{EAR\_TH\_R} & 0.23 & Below this ratio, right eyelid closure is detected. \\
+Blink Frame Persistence & \texttt{CONSEC\_FRAMES} & 4 frames & Minimum frames ($\sim 133$\,ms) to reject micro-blinks. \\
+Max Blink Window & \texttt{max\_blink} & 20 frames & $\le 660$\,ms window; longer closures mark drowsiness. \\
+Left Click Cooldown & \texttt{CLICK\_COOL} & 0.90\,s & Refractory period preventing unintentional double clicks. \\
+\midrule
+\multicolumn{4}{l}{\textbf{C. Head Pose \& Calibration Margins}} \\
+Yaw Posture Threshold & \texttt{YAW\_TH} & $25.0^\circ$ & Max head turn angle for valid gaze interaction. \\
+Pitch Posture Threshold & \texttt{PITCH\_TH} & $20.0^\circ$ & Max vertical tilt angle for valid gaze interaction. \\
+Default Gaze Calibration & \texttt{gaze\_calib} & [0.35, 0.65, 0.30, 0.70] & Initial normalized eye-box $[x_{\min}, x_{\max}, y_{\min}, y_{\max}]$. \\
+User Profile MSE Cutoff & \texttt{MSE\_CUTOFF} & 0.0035 & Profile matching tolerance for returning users. \\
+\midrule
+\multicolumn{4}{l}{\textbf{D. Gaze Smoothing \& Dwell Interaction Engine}} \\
+EMA Smoothing Factor & \texttt{GAZE\_ALPHA} & 0.08 & Exponential smoothing coefficient ($\alpha \in (0, 1]$). \\
+Mouse Deadzone & \texttt{MOUSE\_DEADZONE} & 8\,px & Ignores micro-saccadic tremor below 8 pixels. \\
+Mouse Speed Cap & \texttt{MOUSE\_SPEED\_CAP} & 40\,px/frame & Max distance cursor can translate per frame. \\
+Dwell Click Hold Time & \texttt{DWELL\_CLICK\_TIME} & 1.50\,s & Required gaze persistence to trigger selection. \\
+Dwell Spatial Radius & \texttt{DWELL\_RADIUS\_TH} & 35\,px & Spatial anchor radius bounding the gaze fixation. \\
+Dwell Click Cooldown & \texttt{DWELL\_COOLDOWN} & 1.80\,s & Cooldown following dwell selection before next dwell. \\
+\midrule
+\multicolumn{4}{l}{\textbf{E. Experimental Timing \& Stimulus Progression}} \\
+Overt Memorize Window & \texttt{MEMORIZE\_SECS} & 15.0\,s & Countdown duration for overt prompt memorization. \\
+Instructions Countdown & \texttt{secs=5} & 5.0\,s & Auto-advance timer on instruction screen. \\
+Fixation Cross Duration & \texttt{secs=5} & 5.0\,s & Center gaze fixation interval before each trial. \\
+Inter-Trial Rest Break & \texttt{REST\_DURATION} & 30.0\,s & Pause duration with audio TTS guidance. \\
+Trial Count per Session & \texttt{TRIALS\_PER\_SESSION} & 8 trials & 5 canonical words + 3 pangram phrases. \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 % =============================================================================
 \section{Text Entry Evaluation Metrics \& Formulation}
