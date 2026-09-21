@@ -1173,45 +1173,23 @@ class BrowserWindow(tk.Toplevel):
 #  TEXT-ENTRY EXPERIMENT
 # ─────────────────────────────────────────────────────────────────────────────
 class TextEntryExperiment(tk.Toplevel):
-    """
-    Gaze-based text-entry experiment — Overt & Covert methods.
-
-    Overt:  Stimulus shown for MEMORIZE_SECS → hidden → subject types from memory
-    Covert: Stimulus permanently visible → subject types while reading
-
-    Flow (both methods):
-        INTRO  (method selection)
-        INSTRUCTIONS  (5 s auto-advance)
-        FIXATION  +  (5 s auto-advance)     ← repeated before each trial
-        STIMULUS phase  (overt memorize or covert typing)
-        RESULTS
-    """
+   
 
     # ── Test stimuli — 20 research phrases ────────────────────────────────
+    # ─────────────────────────────────────────────────────────────────────────
+    #  FIXED STIMULUS SETS  — identical for every participant
+    #  Words  : 8 common 4-6 letter words (easy to memorise and type)
+    #  Phrases : 3 pangrams (short / medium / long) covering all letters
+    # ─────────────────────────────────────────────────────────────────────────
     ALL_PHRASES = [
-        # ── Original pangrams ──
-        "The quick brown fox jumps over the lazy dog.",
-        "Pack my box with five dozen liquor jugs.",
-        "Sphinx of black quartz, judge my vow",
-        "How vexingly quick daft zebras jump!",
-        "The five boxing wizards jump quickly.",
-        "Waltz, bad nymph, for quick jigs vex.",
-        # ── Easy pangrams (shorter / simpler vocabulary) ──
-        "Mr Jock, TV quiz PhD, bags few lynx.",
-        "Jump by vow of quick, lazy strength in Oxford.",
-        "Brick quiz whangs jumpy veldt fox.",
-        "Glib jocks quiz nymph to vex dwarf.",
-        "Jackdaws love my big sphinx of quartz.",
-        "Few quips galvanized the mock jury box.",
-        "The jay, pig, fox, zebra and my wolves quack!",
-        "A quick move of the enemy will jeopardize six gunboats.",
+        "The quick brown fox jumps over the lazy dog.",          # long
+        "Pack my box with five dozen liquor jugs.",              # medium
+        "Sphinx of black quartz, judge my vow.",                 # short
     ]
     ALL_WORDS = [
-        "water", "help", "food", "apple", "house", "smile", "table", "chair",
-        "light", "clock", "sugar", "bread", "paper", "music", "river", "beach",
-        "grass", "plant", "green", "happy", "cloud", "storm", "stone", "night"
+        "help", "food", "table", "chair", "smile",
     ]
-    TRIALS_PER_SESSION = 2          # phrases randomly selected per session
+    TRIALS_PER_SESSION = 8   # 5 words + 3 phrases
 
     MEMORIZE_SECS = 15                     # overt: memorization window (15 seconds)
 
@@ -1633,22 +1611,25 @@ class TextEntryExperiment(tk.Toplevel):
         self._idx           = 0
         self._responses     = []
 
-        # 8 words and 3 phrases
-        words   = random.sample(self.ALL_WORDS, min(8, len(self.ALL_WORDS)))
-        phrases = random.sample(self.ALL_PHRASES, min(3, len(self.ALL_PHRASES)))
+        # ── Build stimulus list from the FIXED canonical sets ─────────────────
+        # Both lists are deterministic — every participant sees the same items.
+        words   = list(self.ALL_WORDS)    # exactly 5 words (no sampling)
+        phrases = list(self.ALL_PHRASES)  # exactly 3 phrases (no sampling)
 
         if sequence_mode == "fixed":
-            # 2 words -> 1 phrase -> 2 words -> 1 phrase -> 4 words -> 1 phrase
+            # Fixed interleaved order:
+            # W W P  W W P  W P  (2+1 + 2+1 + 1+1 = 8 trials)
             self._stimuli = [
                 words[0], words[1],
                 phrases[0],
                 words[2], words[3],
                 phrases[1],
-                words[4], words[5], words[6], words[7],
+                words[4],
                 phrases[2]
             ]
         else:
-            # Fully randomized sequence
+            # Random mode: shuffle the same fixed pool so items differ in order
+            # but every participant still gets all 5 words and all 3 phrases.
             pool = words + phrases
             random.shuffle(pool)
             self._stimuli = pool
@@ -1666,7 +1647,9 @@ class TextEntryExperiment(tk.Toplevel):
         self._gaze_csv_path = os.path.join(base_dir, candidate_csvs[0]) \
             if candidate_csvs else None
         print(f"[HeatMap] Experiment started ({method.upper()} - {sequence_mode.upper()}). Gaze CSV: {self._gaze_csv_path}")
+        self._center_cursor()   # centre cursor before first trial
         self._show_instructions()
+
 
     # ─────────────────────────────────────────────────────────────────────────
     #  PHASE 1 — INSTRUCTIONS  (5 s auto-advance)
@@ -2067,6 +2050,8 @@ class TextEntryExperiment(tk.Toplevel):
                     os.remove(self._PAUSE_FLAG)
             except Exception:
                 pass
+            # Move OS cursor to screen centre so gaze tracking resumes from centre
+            self._center_cursor()
             # Countdown finished — announce tracker resuming and proceed
             c.create_text(cx, cy + 50, text="GO!",
                           fill=self._C_GRN, font=("Segoe UI", 72, "bold"),
@@ -2074,6 +2059,16 @@ class TextEntryExperiment(tk.Toplevel):
             self._beep_async(1400, 300)
             self._speak_async("Tracker is starting.")
             self._after_id = self.after(800, self._show_fixation)
+
+    def _center_cursor(self):
+        """Warp the OS mouse pointer to the exact centre of this window's screen."""
+        try:
+            import ctypes
+            sw = self.winfo_screenwidth()
+            sh = self.winfo_screenheight()
+            ctypes.windll.user32.SetCursorPos(sw // 2, sh // 2)
+        except Exception:
+            pass   # silently ignore on non-Windows or permission errors
 
     def _beep_async(self, freq, duration_ms):
         """Play a beep sound in a background thread so UI doesn't freeze."""
