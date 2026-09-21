@@ -92,9 +92,9 @@ class AttentionTracker:
         self.last_l_click    = 0.0;  self.last_r_click = 0.0
 
         # -- Dwell-to-click (hold gaze to open file/folder) ------------------ #
-        self.DWELL_CLICK_TIME  = 1.25   # seconds to hold gaze before click (was 1.0)
-        self.DWELL_RADIUS_TH   = 40     # px - gaze must stay within this radius
-        self.DWELL_COOLDOWN    = 1.50   # seconds between dwell-clicks (was 1.2)
+        self.DWELL_CLICK_TIME  = 1.50   # seconds to hold gaze before click (was 1.25 for misclick protection)
+        self.DWELL_RADIUS_TH   = 35     # px - gaze must stay within this radius (was 40)
+        self.DWELL_COOLDOWN    = 1.80   # seconds between dwell-clicks (was 1.50)
         self.dwell_anchor_x    = None   # screen px where dwell started
         self.dwell_anchor_y    = None
         self.dwell_start_t     = None   # when dwell started
@@ -102,13 +102,13 @@ class AttentionTracker:
         self.last_dwell_click  = 0.0    # last dwell-click timestamp
 
         # -- Gaze smoothing -------------------------------------------------- #
-        self.GAZE_ALPHA      = 0.12   # increased for better responsiveness (was 0.06)
+        self.GAZE_ALPHA      = 0.08   # smoother cursor & reduced jitter (was 0.12)
         self.gaze_sx_sm      = None
         self.gaze_sy_sm      = None
         self.mouse_mode      = True
         self.gaze_calib      = [0.35, 0.65, 0.30, 0.70]
         self.MOUSE_SPEED_CAP = 40     # max pixels to move per frame
-        self.MOUSE_DEADZONE  = 4      # ignore jitter under this many pixels
+        self.MOUSE_DEADZONE  = 8      # ignore micro-jitter under 8 pixels (was 4)
 
         # -- Head pose ------------------------------------------------------- #
         self.YAW_TH   = 25;  self.PITCH_TH = 20
