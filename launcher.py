@@ -1187,7 +1187,7 @@ class TextEntryExperiment(tk.Toplevel):
         "Sphinx of black quartz, judge my vow.",                 # short
     ]
     ALL_WORDS = [
-        "help", "food", "table", "chair", "smile",
+        "godu", "food", "table", "chair", "smile",
     ]
     TRIALS_PER_SESSION = 8   # 5 words + 3 phrases
 
