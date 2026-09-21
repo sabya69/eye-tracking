@@ -1220,6 +1220,7 @@ class TextEntryExperiment(tk.Toplevel):
     _C_FG  = "#1A1D23"   # dark text
     _C_ACC = "#2563EB"   # blue accent  (overt)
     _C_BLU = "#2563EB"   # blue accent  (covert)
+    _C_PUR = "#7C3AED"   # purple accent (random mode)
     _C_DIM = "#6B7280"   # muted gray
     _C_FIX = "#000000"   # black fixation cross
     _C_GRN = "#16A34A"
@@ -1266,9 +1267,10 @@ class TextEntryExperiment(tk.Toplevel):
         self.bind("<Escape>", lambda e: self.destroy())
 
         self._method            = None   # "overt" or "covert"
+        self._sequence_mode     = None   # "fixed" or "random"
         self._idx               = 0
         self._responses         = []
-        self._stimuli           = []     # 2 phrases chosen randomly each session
+        self._stimuli           = []     # list of words and phrases for the session
         self._participant_name  = ""     # entered on the name screen
         self._after_id          = None
         self._typing_frame      = None
@@ -1446,15 +1448,15 @@ class TextEntryExperiment(tk.Toplevel):
 
         overt_f = method_btn(c,
             "OVERT",
-            "Word shown for 2 min\nthen type from memory",
+            "Word shown for 15s\nthen type from memory",
             self._C_ACC,
-            lambda: self._begin("overt"))
+            lambda: self._show_sequence_mode_selection("overt"))
 
         covert_f = method_btn(c,
             "COVERT",
             "Word stays visible;\ntype while reading",
             self._C_BLU,
-            lambda: self._begin("covert"))
+            lambda: self._show_sequence_mode_selection("covert"))
 
         c.create_window(cx - 170, cy + 130, window=overt_f,  anchor="center")
         c.create_window(cx + 170, cy + 130, window=covert_f, anchor="center")
@@ -1464,21 +1466,109 @@ class TextEntryExperiment(tk.Toplevel):
                       fill=self._C_DIM, font=self._F_SMALL, anchor="center")
 
     # ─────────────────────────────────────────────────────────────────────────
-    def _begin(self, method):
-        self._method    = method
-        self._idx       = 0
-        self._responses = []
-        if method == "overt":
-            words = random.sample(self.ALL_WORDS, 2)
-            phrases = random.sample(self.ALL_PHRASES, 2)
-            self._stimuli = words + phrases
+    #  PHASE 0-B — SEQUENCE MODE SELECTION (Fixed vs Random)
+    # ─────────────────────────────────────────────────────────────────────────
+    def _show_sequence_mode_selection(self, method):
+        self._use_canvas()
+        self._clear()
+        self.update_idletasks()
+
+        c  = self._canvas
+        cx, cy = self._cx(), self._cy()
+        w, h   = self._cw(), self._ch()
+
+        method_color = self._C_ACC if method == "overt" else self._C_BLU
+
+        c.create_text(cx, cy - 180, text=f"{method.upper()} METHOD",
+                      fill=method_color, font=("Segoe UI", 14, "bold"), anchor="center")
+        c.create_text(cx, cy - 140, text="Select Sequence Mode",
+                      fill=self._C_FG, font=self._F_TITLE, anchor="center")
+        c.create_line(cx - 260, cy - 100, cx + 260, cy - 100, fill=self._C_DIM, width=1)
+        c.create_text(cx, cy - 70,
+                      text="Choose how words and phrases will be presented during testing:",
+                      fill=self._C_FG, font=self._F_BODY, anchor="center")
+
+        def mode_card(parent, title, sub, color, cmd):
+            outer = tk.Frame(parent, bg=self._C_DIM, padx=1, pady=1, cursor="hand2")
+            inner = tk.Frame(outer, bg=self._C_BG, padx=32, pady=24)
+            inner.pack()
+            lbl_t = tk.Label(inner, text=title, bg=self._C_BG, fg=color,
+                             font=("Segoe UI", 20, "bold"))
+            lbl_t.pack()
+            lbl_s = tk.Label(inner, text=sub, bg=self._C_BG, fg=self._C_DIM,
+                             font=self._F_SMALL, wraplength=230, justify="center")
+            lbl_s.pack(pady=(8, 0))
+            for widget in (outer, inner, lbl_t, lbl_s):
+                widget.bind("<Button-1>", lambda e: cmd())
+                widget.bind("<Enter>", lambda e, o=outer: o.config(bg=color))
+                widget.bind("<Leave>", lambda e, o=outer: o.config(bg=self._C_DIM))
+            return outer
+
+        fixed_f = mode_card(
+            c,
+            "FIXED",
+            "2 Words  →  1 Phrase\n2 Words  →  1 Phrase\n4 Words  →  1 Phrase\n\n(11 Structured Trials)",
+            self._C_ACC,
+            lambda: self._begin(method, "fixed")
+        )
+
+        random_f = mode_card(
+            c,
+            "RANDOM",
+            "Fully randomized order of\n8 words and 3 phrases\n\n(11 Randomized Trials)",
+            self._C_PUR,
+            lambda: self._begin(method, "random")
+        )
+
+        c.create_window(cx - 190, cy + 70, window=fixed_f, anchor="center")
+        c.create_window(cx + 190, cy + 70, window=random_f, anchor="center")
+
+        # Back button
+        back_btn = tk.Button(
+            c, text="←  Back to Method Selection",
+            command=self._show_intro,
+            bg=self._C_BG, fg=self._C_DIM,
+            activebackground="#EFEFEF", activeforeground=self._C_FG,
+            relief="solid", bd=1,
+            font=self._F_SMALL, padx=14, pady=6, cursor="hand2"
+        )
+        c.create_window(cx, cy + 220, window=back_btn, anchor="center")
+
+        c.create_text(cx, h - 32,
+                      text="Press  Esc  to close",
+                      fill=self._C_DIM, font=self._F_SMALL, anchor="center")
+
+    # ─────────────────────────────────────────────────────────────────────────
+    def _begin(self, method, sequence_mode="fixed"):
+        self._method        = method
+        self._sequence_mode = sequence_mode
+        self._idx           = 0
+        self._responses     = []
+
+        # 8 words and 3 phrases
+        words   = random.sample(self.ALL_WORDS, min(8, len(self.ALL_WORDS)))
+        phrases = random.sample(self.ALL_PHRASES, min(3, len(self.ALL_PHRASES)))
+
+        if sequence_mode == "fixed":
+            # 2 words -> 1 phrase -> 2 words -> 1 phrase -> 4 words -> 1 phrase
+            self._stimuli = [
+                words[0], words[1],
+                phrases[0],
+                words[2], words[3],
+                phrases[1],
+                words[4], words[5], words[6], words[7],
+                phrases[2]
+            ]
         else:
-            self._stimuli   = random.sample(self.ALL_PHRASES, self.TRIALS_PER_SESSION)
+            # Fully randomized sequence
+            pool = words + phrases
+            random.shuffle(pool)
+            self._stimuli = pool
+
         # ── Mark experiment start time for heatmap ─────────────────────────────
         self._exp_start_time = datetime.datetime.now()
         # ── Find the active gaze log CSV from the running tracker ───────────────
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        # Tracker names the CSV after the user; fall back to gaze_log.csv
         candidate_csvs = sorted(
             [f for f in os.listdir(base_dir)
              if f.endswith("_gaze_log.csv") or f == "gaze_log.csv"],
@@ -1487,7 +1577,7 @@ class TextEntryExperiment(tk.Toplevel):
         )
         self._gaze_csv_path = os.path.join(base_dir, candidate_csvs[0]) \
             if candidate_csvs else None
-        print(f"[HeatMap] Experiment started. Gaze CSV: {self._gaze_csv_path}")
+        print(f"[HeatMap] Experiment started ({method.upper()} - {sequence_mode.upper()}). Gaze CSV: {self._gaze_csv_path}")
         self._show_instructions()
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -1549,7 +1639,7 @@ class TextEntryExperiment(tk.Toplevel):
                 self._show_covert_typing()
 
     # ─────────────────────────────────────────────────────────────────────────
-    #  PHASE 3-A — OVERT: memorize  (2-min countdown)
+    #  PHASE 3-A — OVERT: memorize  (15-second countdown)
     # ─────────────────────────────────────────────────────────────────────────
     def _show_overt_memorize(self, secs=None):
         if secs is None:
@@ -1603,7 +1693,8 @@ class TextEntryExperiment(tk.Toplevel):
         hdr = tk.Frame(frame, bg=self._C_BG, padx=24, pady=14,
                        highlightbackground=self._C_DIM, highlightthickness=1)
         hdr.pack(fill="x")
-        tk.Label(hdr, text="OVERT  ·  Type from memory",
+        mode_tag = f" ({self._sequence_mode.upper()})" if self._sequence_mode else ""
+        tk.Label(hdr, text=f"OVERT{mode_tag}  ·  Type from memory",
                  bg=self._C_BG, fg=self._C_FG,
                  font=("Segoe UI", 14, "bold")).pack(side="left")
         tk.Label(hdr,
@@ -1662,6 +1753,7 @@ class TextEntryExperiment(tk.Toplevel):
                 "participant_name"   : self._participant_name,
                 "trial_number"       : self._idx + 1,
                 "method"             : "overt",
+                "sequence_mode"      : self._sequence_mode or "fixed",
                 "stimulus"           : self._current_stim(),
                 "typed_response"     : typed,
                 "is_correct"         : typed.strip().lower() == (self._current_stim() or "").strip().lower(),
@@ -1701,7 +1793,8 @@ class TextEntryExperiment(tk.Toplevel):
         hdr = tk.Frame(frame, bg=self._C_BG, padx=24, pady=14,
                        highlightbackground=self._C_DIM, highlightthickness=1)
         hdr.pack(fill="x")
-        tk.Label(hdr, text="COVERT  ·  Type what you see",
+        mode_tag = f" ({self._sequence_mode.upper()})" if self._sequence_mode else ""
+        tk.Label(hdr, text=f"COVERT{mode_tag}  ·  Type what you see",
                  bg=self._C_BG, fg=self._C_FG,
                  font=("Segoe UI", 14, "bold")).pack(side="left")
         tk.Label(hdr,
@@ -1771,6 +1864,7 @@ class TextEntryExperiment(tk.Toplevel):
                 "participant_name"   : self._participant_name,
                 "trial_number"       : self._idx + 1,
                 "method"             : "covert",
+                "sequence_mode"      : self._sequence_mode or "fixed",
                 "stimulus"           : self._current_stim(),
                 "typed_response"     : typed,
                 "is_correct"         : typed.strip().lower() == (self._current_stim() or "").strip().lower(),
@@ -1864,7 +1958,7 @@ class TextEntryExperiment(tk.Toplevel):
             bar_y = cy + 170
             frac  = 1.0 - (secs / self.REST_DURATION)
             c.create_rectangle(bar_x, bar_y, bar_x + bar_w, bar_y + 12,
-                               fill="#E5E7EB", outline="", tags="rest_bar")
+                                fill="#E5E7EB", outline="", tags="rest_bar")
             c.create_rectangle(bar_x, bar_y, bar_x + int(bar_w * frac), bar_y + 12,
                                fill=self._C_ACC, outline="", tags="rest_bar")
 
@@ -1944,12 +2038,6 @@ class TextEntryExperiment(tk.Toplevel):
                 print("[HeatMap] Gaze CSV missing required columns.")
                 return
 
-            # The tracker's `timestamp` is seconds elapsed since session start.
-            # Use the row count written before vs after to slice the window.
-            # Simpler: use all rows if tracker just started; otherwise use the
-            # last N rows added since experiment began.
-            # We compare mtime of the CSV to our start time to estimate rows.
-            # Most robust: grab all gaze data (the heatmap covers the whole session).
             gaze_pts = list(zip(df["gaze_x"].tolist(), df["gaze_y"].tolist()))
 
             if not gaze_pts:
@@ -1984,12 +2072,13 @@ class TextEntryExperiment(tk.Toplevel):
 
         ts        = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_name = self._participant_name.strip().lower().replace(" ", "_") or "unknown"
-        filename  = f"experiment_{self._method}_{safe_name}_{ts}.csv"
+        mode_str  = f"_{self._sequence_mode}" if self._sequence_mode else ""
+        filename  = f"experiment_{self._method}{mode_str}_{safe_name}_{ts}.csv"
         filepath  = os.path.join(csv_dir, filename)
 
         # ── Write CSV ────────────────────────────────────────────────────────
         fieldnames = [
-            "participant_name", "trial_number", "method", "stimulus",
+            "participant_name", "trial_number", "method", "sequence_mode", "stimulus",
             "typed_response", "is_correct", "trial_start_time", "trial_end_time",
             "typing_duration_sec", "spacebar_count", "backspace_count",
             "char_count", "word_count", "letter_timestamps",
@@ -2025,8 +2114,9 @@ class TextEntryExperiment(tk.Toplevel):
             c.create_text(cx, cy - 90,
                           text="✓  Experiment Complete",
                           fill=self._C_GRN, font=self._F_HEAD, anchor="center")
+            mode_desc = f" ({self._sequence_mode.upper()})" if self._sequence_mode else ""
             c.create_text(cx, cy - 45,
-                          text=f"{self._method.upper()}  ·  {len(self._responses)} trial(s) saved to CSV",
+                          text=f"{self._method.upper()}{mode_desc}  ·  {len(self._responses)} trial(s) saved to CSV",
                           fill=self._C_DIM, font=self._F_BODY, anchor="center")
             c.create_text(cx, cy,
                           text="Saved to:",
