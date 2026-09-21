@@ -1268,6 +1268,7 @@ class TextEntryExperiment(tk.Toplevel):
 
         self._method            = None   # "overt" or "covert"
         self._sequence_mode     = None   # "fixed" or "random"
+        self._keyboard_layout   = "normal"  # "normal", "alpha", or "cluster"
         self._idx               = 0
         self._responses         = []
         self._stimuli           = []     # list of words and phrases for the session
@@ -1509,7 +1510,7 @@ class TextEntryExperiment(tk.Toplevel):
             "FIXED",
             "2 Words  →  1 Phrase\n2 Words  →  1 Phrase\n4 Words  →  1 Phrase\n\n(11 Structured Trials)",
             self._C_ACC,
-            lambda: self._begin(method, "fixed")
+            lambda: self._show_keyboard_selection(method, "fixed")
         )
 
         random_f = mode_card(
@@ -1517,7 +1518,7 @@ class TextEntryExperiment(tk.Toplevel):
             "RANDOM",
             "Fully randomized order of\n8 words and 3 phrases\n\n(11 Randomized Trials)",
             self._C_PUR,
-            lambda: self._begin(method, "random")
+            lambda: self._show_keyboard_selection(method, "random")
         )
 
         c.create_window(cx - 190, cy + 70, window=fixed_f, anchor="center")
@@ -1539,9 +1540,96 @@ class TextEntryExperiment(tk.Toplevel):
                       fill=self._C_DIM, font=self._F_SMALL, anchor="center")
 
     # ─────────────────────────────────────────────────────────────────────────
-    def _begin(self, method, sequence_mode="fixed"):
-        self._method        = method
-        self._sequence_mode = sequence_mode
+    #  PHASE 0-C — KEYBOARD SELECTION
+    # ─────────────────────────────────────────────────────────────────────────
+    def _show_keyboard_selection(self, method, sequence_mode):
+        self._use_canvas()
+        self._clear()
+        self.update_idletasks()
+
+        c  = self._canvas
+        cx, cy = self._cx(), self._cy()
+        w, h   = self._cw(), self._ch()
+
+        method_color = self._C_ACC if method == "overt" else self._C_BLU
+        seq_color    = self._C_ACC if sequence_mode == "fixed" else self._C_PUR
+
+        # Breadcrumb
+        c.create_text(cx, cy - 200, text=f"{method.upper()}  ·  {sequence_mode.upper()} SEQUENCE",
+                      fill=method_color, font=("Segoe UI", 13, "bold"), anchor="center")
+        c.create_text(cx, cy - 162, text="Select Keyboard Layout",
+                      fill=self._C_FG, font=self._F_TITLE, anchor="center")
+        c.create_line(cx - 290, cy - 122, cx + 290, cy - 122, fill=self._C_DIM, width=1)
+        c.create_text(cx, cy - 90,
+                      text="Choose the on-screen keyboard arrangement for all typing trials:",
+                      fill=self._C_FG, font=self._F_BODY, anchor="center")
+
+        # ── Keyboard option cards ─────────────────────────────────────────────
+        KB_OPTIONS = [
+            (
+                "QWERTY",
+                "normal",
+                "Standard QWERTY layout\n(familiar, most common)",
+                self._C_ACC,
+            ),
+            (
+                "ALPHABETICAL",
+                "alpha",
+                "A → Z alphabetical order\n(systematic arrangement)",
+                self._C_BLU,
+            ),
+            (
+                "FREQUENCY",
+                "cluster",
+                "Letter-frequency clustered\n(common letters centred)",
+                self._C_PUR,
+            ),
+        ]
+
+        def kb_card(parent, title, sub, color, cmd):
+            outer = tk.Frame(parent, bg=self._C_DIM, padx=1, pady=1, cursor="hand2")
+            inner = tk.Frame(outer, bg=self._C_BG, padx=26, pady=20)
+            inner.pack()
+            lbl_t = tk.Label(inner, text=title, bg=self._C_BG, fg=color,
+                             font=("Segoe UI", 16, "bold"))
+            lbl_t.pack()
+            lbl_s = tk.Label(inner, text=sub, bg=self._C_BG, fg=self._C_DIM,
+                             font=self._F_SMALL, wraplength=195, justify="center")
+            lbl_s.pack(pady=(8, 0))
+            for widget in (outer, inner, lbl_t, lbl_s):
+                widget.bind("<Button-1>", lambda e: cmd())
+                widget.bind("<Enter>", lambda e, o=outer: o.config(bg=color))
+                widget.bind("<Leave>", lambda e, o=outer: o.config(bg=self._C_DIM))
+            return outer
+
+        positions = [cx - 280, cx, cx + 280]
+        for pos, (title, layout_key, sub, color) in zip(positions, KB_OPTIONS):
+            card = kb_card(
+                c, title, sub, color,
+                lambda lk=layout_key: self._begin(method, sequence_mode, lk)
+            )
+            c.create_window(pos, cy + 70, window=card, anchor="center")
+
+        # Back button
+        back_btn = tk.Button(
+            c, text="←  Back to Sequence Selection",
+            command=lambda: self._show_sequence_mode_selection(method),
+            bg=self._C_BG, fg=self._C_DIM,
+            activebackground="#EFEFEF", activeforeground=self._C_FG,
+            relief="solid", bd=1,
+            font=self._F_SMALL, padx=14, pady=6, cursor="hand2"
+        )
+        c.create_window(cx, cy + 230, window=back_btn, anchor="center")
+
+        c.create_text(cx, h - 32,
+                      text="Press  Esc  to close",
+                      fill=self._C_DIM, font=self._F_SMALL, anchor="center")
+
+    # ─────────────────────────────────────────────────────────────────────────
+    def _begin(self, method, sequence_mode="fixed", keyboard_layout="normal"):
+        self._method          = method
+        self._sequence_mode   = sequence_mode
+        self._keyboard_layout = keyboard_layout
         self._idx           = 0
         self._responses     = []
 
@@ -1754,6 +1842,7 @@ class TextEntryExperiment(tk.Toplevel):
                 "trial_number"       : self._idx + 1,
                 "method"             : "overt",
                 "sequence_mode"      : self._sequence_mode or "fixed",
+                "keyboard_layout"    : self._keyboard_layout,
                 "stimulus"           : self._current_stim(),
                 "typed_response"     : typed,
                 "is_correct"         : typed.strip().lower() == (self._current_stim() or "").strip().lower(),
@@ -1779,7 +1868,7 @@ class TextEntryExperiment(tk.Toplevel):
         # Keyboard
         kb = tk.Frame(frame, bg=self._C_BG)
         kb.pack(fill="both", expand=True, padx=8, pady=4)
-        OnScreenKeyboard(kb, txt, layout="normal", notepad_app=None).pack(fill="both", expand=True)
+        OnScreenKeyboard(kb, txt, layout=self._keyboard_layout, notepad_app=None).pack(fill="both", expand=True)
 
     # ─────────────────────────────────────────────────────────────────────────
     #  PHASE 4 — COVERT: word visible + keyboard
@@ -1865,6 +1954,7 @@ class TextEntryExperiment(tk.Toplevel):
                 "trial_number"       : self._idx + 1,
                 "method"             : "covert",
                 "sequence_mode"      : self._sequence_mode or "fixed",
+                "keyboard_layout"    : self._keyboard_layout,
                 "stimulus"           : self._current_stim(),
                 "typed_response"     : typed,
                 "is_correct"         : typed.strip().lower() == (self._current_stim() or "").strip().lower(),
@@ -1890,7 +1980,7 @@ class TextEntryExperiment(tk.Toplevel):
         # Keyboard
         kb = tk.Frame(frame, bg=self._C_BG)
         kb.pack(fill="both", expand=True, padx=8, pady=4)
-        OnScreenKeyboard(kb, txt, layout="normal", notepad_app=None).pack(fill="both", expand=True)
+        OnScreenKeyboard(kb, txt, layout=self._keyboard_layout, notepad_app=None).pack(fill="both", expand=True)
 
     def _advance(self):
         self._idx += 1
