@@ -2157,19 +2157,22 @@ class TextEntryExperiment(tk.Toplevel):
     def _save_csv_and_finish(self):
         # ── Determine output path ────────────────────────────────────────────
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        csv_dir  = os.path.join(base_dir, "csv")
+        csv_dir  = os.path.join(base_dir, "Real_test", "real_test_csv")
         os.makedirs(csv_dir, exist_ok=True)
 
         ts        = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_name = self._participant_name.strip().lower().replace(" ", "_") or "unknown"
         mode_str  = f"_{self._sequence_mode}" if self._sequence_mode else ""
-        filename  = f"experiment_{self._method}{mode_str}_{safe_name}_{ts}.csv"
+        kb_str    = f"_{self._keyboard_layout}" if self._keyboard_layout else ""
+        filename  = f"experiment_{self._method}{mode_str}{kb_str}_{safe_name}_{ts}.csv"
         filepath  = os.path.join(csv_dir, filename)
 
         # ── Write CSV ────────────────────────────────────────────────────────
         fieldnames = [
-            "participant_name", "trial_number", "method", "sequence_mode", "stimulus",
-            "typed_response", "is_correct", "trial_start_time", "trial_end_time",
+            "participant_name", "trial_number", "method", "sequence_mode",
+            "keyboard_layout",
+            "stimulus", "typed_response", "is_correct",
+            "trial_start_time", "trial_end_time",
             "typing_duration_sec", "spacebar_count", "backspace_count",
             "char_count", "word_count", "letter_timestamps",
         ]
@@ -2212,7 +2215,7 @@ class TextEntryExperiment(tk.Toplevel):
                           text="Saved to:",
                           fill=self._C_DIM, font=self._F_SMALL, anchor="center")
             c.create_text(cx, cy + 32,
-                          text=f"csv/{filename}",
+                          text=f"Real_test/real_test_csv/{filename}",
                           fill=self._C_FG, font=("Segoe UI", 13, "bold"), anchor="center")
         else:
             c.create_text(cx, cy - 60,
