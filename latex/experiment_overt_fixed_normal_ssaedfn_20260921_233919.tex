@@ -1,0 +1,313 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[a4paper,landscape,margin=0.55in]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage[table]{xcolor}
+\usepackage{ragged2e}
+\usepackage{helvet}
+
+\renewcommand{\familydefault}{\sfdefault}
+
+% Simple colors
+\definecolor{headergray}{RGB}{235,235,235}
+\definecolor{textgray}{RGB}{80,80,80}
+
+% Column types
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.3}
+
+\begin{document}
+
+% =========================================================
+% TITLE
+% =========================================================
+
+\begin{center}
+    {\Large\bfseries Typing Experiment Data}\\
+    \vspace{2pt}
+    Participant: \textbf{Ssaedfn}
+\end{center}
+
+\vspace{0.25cm}
+
+% =========================================================
+% TRIAL PERFORMANCE
+% =========================================================
+
+\noindent
+{\large\bfseries 1. Trial Performance}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.45in}
+    C{0.65in}
+    L{2.35in}
+    L{2.55in}
+    C{0.65in}
+    C{0.65in}
+    C{0.55in}
+    C{0.75in}
+    C{0.55in}
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Method} &
+\textbf{Stimulus} &
+\textbf{Typed Response} &
+\textbf{Correct} &
+\textbf{Time (s)} &
+\textbf{Space} &
+\textbf{Backspace} &
+\textbf{Chars}
+\\
+
+\midrule
+
+1 &
+Overt &
+bread &
+bread &
+Yes &
+68.825 &
+0 &
+4 &
+5
+\\
+
+2 &
+Overt &
+stone &
+stone &
+Yes &
+26.253 &
+0 &
+0 &
+5
+\\
+
+3 &
+Overt &
+Brick quiz whangs jumpy veldt fox. &
+brick quiz &
+No &
+130.023 &
+1 &
+16 &
+10
+\\
+
+4 &
+Overt &
+food &
+foos &
+No &
+15.571 &
+0 &
+3 &
+4
+\\
+
+5 &
+Overt &
+cloud &
+food &
+No &
+2.969 &
+0 &
+0 &
+4
+\\
+
+6 &
+Overt &
+How vexingly quick daft zebras jump! &
+nan &
+No &
+nan &
+0 &
+0 &
+0
+\\
+
+7 &
+Overt &
+beach &
+beach &
+Yes &
+3.214 &
+0 &
+0 &
+5
+\\
+
+8 &
+Overt &
+river &
+river &
+Yes &
+3.648 &
+0 &
+0 &
+5
+\\
+
+9 &
+Overt &
+paper &
+river &
+No &
+3.112 &
+0 &
+0 &
+5
+\\
+
+10 &
+Overt &
+smile &
+yyy &
+No &
+1.007 &
+0 &
+0 &
+3
+\\
+
+11 &
+Overt &
+Glib jocks quiz nymph to vex dwarf. &
+uu &
+No &
+1.036 &
+0 &
+0 &
+2
+\\
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vspace{0.35cm}
+
+% =========================================================
+% KEYSTROKE TIMESTAMPS
+% =========================================================
+
+\noindent
+{\large\bfseries 2. Keystroke Timestamps}
+
+\vspace{0.08cm}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{
+    C{0.55in}
+    X
+}
+\toprule
+
+\rowcolor{headergray}
+\textbf{Trial} &
+\textbf{Keystroke Timestamps (seconds)}
+\\
+
+\midrule
+
+1 &
+\begin{tabular}[t]{@{}l@{}}
+h:0.000,\ BS:4.832,\ b:13.410,\ r:19.607,\ e:22.767,\ a:25.093,\ a:25.553,\ d:27.546\\
+5:28.957,\ BS:32.905,\ -:33.836,\ BS:50.688,\ BS:66.006
+\end{tabular}
+\\[0.12cm]
+
+2 &
+\begin{tabular}[t]{@{}l@{}}
+s:0.000,\ t:4.751,\ o:10.812,\ n:15.578,\ e:19.976
+\end{tabular}
+\\[0.12cm]
+
+3 &
+\begin{tabular}[t]{@{}l@{}}
+y:0.000,\ BS:6.182,\ \textbackslash\{\}:8.502,\ [:12.976,\ BS:15.075,\ BS:22.466,\ b:30.649,\ r:34.763\\
+i:38.638,\ i:39.052,\ j:41.105,\ BS:42.318,\ BS:45.472,\ c:53.728,\ g:54.912,\ [:59.532\\
+BS:61.569,\ BS:63.154,\ k:69.320,\ SP:75.780,\ q:81.266,\ r:82.730,\ p:84.346,\ -:85.476\\
+BS:87.613,\ BS:89.187,\ BS:91.593,\ 8:94.667,\ BS:98.719,\ BS:100.239,\ 8:103.031,\ 9:103.979\\
+BS:112.039,\ BS:113.552,\ q:121.519,\ t:123.052,\ o:124.174,\ BS:126.328,\ BS:127.168,\ u:127.984\\
+i:128.286,\ z:129.295
+\end{tabular}
+\\[0.12cm]
+
+4 &
+\begin{tabular}[t]{@{}l@{}}
+y:0.000,\ b:1.423,\ BS:4.203,\ BS:5.352,\ w:9.083,\ BS:11.290,\ f:12.730,\ o:13.442\\
+o:13.666,\ s:14.299
+\end{tabular}
+\\[0.12cm]
+
+5 &
+\begin{tabular}[t]{@{}l@{}}
+f:0.000,\ o:0.721,\ o:1.209,\ d:2.001
+\end{tabular}
+\\[0.12cm]
+
+6 &
+\textit{n/a}
+\\[0.12cm]
+
+7 &
+\begin{tabular}[t]{@{}l@{}}
+b:0.000,\ e:0.645,\ a:1.189,\ c:1.853,\ h:2.380
+\end{tabular}
+\\[0.12cm]
+
+8 &
+\begin{tabular}[t]{@{}l@{}}
+r:0.000,\ i:0.617,\ v:1.273,\ e:2.528,\ r:2.809
+\end{tabular}
+\\[0.12cm]
+
+9 &
+\begin{tabular}[t]{@{}l@{}}
+r:0.000,\ i:0.825,\ v:1.417,\ e:2.169,\ r:2.377
+\end{tabular}
+\\[0.12cm]
+
+10 &
+\begin{tabular}[t]{@{}l@{}}
+y:0.000,\ y:0.247,\ y:0.400
+\end{tabular}
+\\[0.12cm]
+
+11 &
+\begin{tabular}[t]{@{}l@{}}
+u:0.000,\ u:0.339
+\end{tabular}
+\\[0.12cm]
+
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vfill
+
+% =========================================================
+% SIMPLE FOOTER
+% =========================================================
+
+\noindent
+\textbf{Participant:} Ssaedfn
+\hfill
+\textbf{Total Trials:} 11
+\hfill
+\textbf{Correct Trials:} 4/11
+
+\end{document}
