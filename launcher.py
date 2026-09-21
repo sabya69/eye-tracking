@@ -1263,8 +1263,8 @@ class TextEntryExperiment(tk.Toplevel):
         super().__init__(master)
         self.title("Text-Entry Experiment")
         self.configure(bg=self._C_BG)
-        self.state("zoomed")
-        self.bind("<Escape>", lambda e: self.destroy())
+        self.attributes("-fullscreen", True)
+        self.bind("<Escape>", lambda e: (self.attributes("-fullscreen", False), self.destroy()))
 
         self._method            = None   # "overt" or "covert"
         self._sequence_mode     = None   # "fixed" or "random"
