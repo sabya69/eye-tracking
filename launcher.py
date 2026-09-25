@@ -1177,19 +1177,21 @@ class TextEntryExperiment(tk.Toplevel):
 
     # ── Test stimuli — 20 research phrases ────────────────────────────────
     # ─────────────────────────────────────────────────────────────────────────
-    #  FIXED STIMULUS SETS  — identical for every participant
-    #  Words  : 8 common 4-6 letter words (easy to memorise and type)
-    #  Phrases : 3 pangrams (short / medium / long) covering all letters
+    # ── FIXED STIMULUS SETS — 15 stimuli per session ─────────────────────────
+    # Words   : 10 common vocabulary words
+    # Phrases : 5 pangrams / test sentences
     # ─────────────────────────────────────────────────────────────────────────
     ALL_PHRASES = [
         "The quick brown fox jumps over the lazy dog.",          # long
-        "Pack my box with five dozen liquor jugs.",              # medium
-        "Sphinx of black quartz, judge my vow.",                 # short
+        "I agree with you",              # short
+        "a little encouragement is needed",                 # medium
+        "I would like to go home",
+        "the computer is running slowly", #long 
     ]
     ALL_WORDS = [
-        "godu", "food", "table", "chair", "smile",
+        "help", "food", "sleep", "Doctor", "Medicine", "Water", "Pain", "Uncomfortable", "family", "Friends",
     ]
-    TRIALS_PER_SESSION = 8   # 5 words + 3 phrases
+    TRIALS_PER_SESSION = 15  # 10 words + 5 phrases
 
     MEMORIZE_SECS = 15                     # overt: memorization window (15 seconds)
 
@@ -1486,7 +1488,7 @@ class TextEntryExperiment(tk.Toplevel):
         fixed_f = mode_card(
             c,
             "FIXED",
-            "2 Words  →  1 Phrase\n2 Words  →  1 Phrase\n4 Words  →  1 Phrase\n\n(11 Structured Trials)",
+            "Structured order:\n2 Words  →  1 Phrase\n(repeated 5 times)\n\n(15 Structured Trials)",
             self._C_ACC,
             lambda: self._show_keyboard_selection(method, "fixed")
         )
@@ -1494,7 +1496,7 @@ class TextEntryExperiment(tk.Toplevel):
         random_f = mode_card(
             c,
             "RANDOM",
-            "Fully randomized order of\n8 words and 3 phrases\n\n(11 Randomized Trials)",
+            "Fully randomized order of\n10 words and 5 phrases\n\n(15 Randomized Trials)",
             self._C_PUR,
             lambda: self._show_keyboard_selection(method, "random")
         )
@@ -1612,24 +1614,26 @@ class TextEntryExperiment(tk.Toplevel):
         self._responses     = []
 
         # ── Build stimulus list from the FIXED canonical sets ─────────────────
-        # Both lists are deterministic — every participant sees the same items.
-        words   = list(self.ALL_WORDS)    # exactly 5 words (no sampling)
-        phrases = list(self.ALL_PHRASES)  # exactly 3 phrases (no sampling)
+        # Both lists are deterministic — every participant sees all 15 items.
+        words   = list(self.ALL_WORDS)    # exactly 10 words
+        phrases = list(self.ALL_PHRASES)  # exactly 5 phrases
 
         if sequence_mode == "fixed":
-            # Fixed interleaved order:
-            # W W P  W W P  W P  (2+1 + 2+1 + 1+1 = 8 trials)
+            # Fixed interleaved order: 5 blocks of (2 Words + 1 Phrase) = 15 trials
             self._stimuli = [
                 words[0], words[1],
                 phrases[0],
                 words[2], words[3],
                 phrases[1],
-                words[4],
-                phrases[2]
+                words[4], words[5],
+                phrases[2],
+                words[6], words[7],
+                phrases[3],
+                words[8], words[9],
+                phrases[4],
             ]
         else:
-            # Random mode: shuffle the same fixed pool so items differ in order
-            # but every participant still gets all 5 words and all 3 phrases.
+            # Random mode: shuffle the full pool of 10 words and 5 phrases (15 trials)
             pool = words + phrases
             random.shuffle(pool)
             self._stimuli = pool
